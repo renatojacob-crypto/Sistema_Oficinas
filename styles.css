@@ -19,7 +19,7 @@ body {
     color: var(--text-color);
     /* CONFIGURAÇÃO DO BACKGROUND */
     /* Coloque a URL da sua imagem de fundo abaixo */
-    background-image: url('LINK_DA_SUA_IMAGEM_DE_FUNDO_AQUI.jpg'); 
+    background-image: url('imagens/fundo.png'); 
     background-size: cover;
     background-position: center;
     background-attachment: fixed;
