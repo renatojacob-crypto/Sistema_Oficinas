@@ -6,7 +6,15 @@
     <style>
         body { font-family: sans-serif; padding: 20px; max-width: 500px; margin: auto; line-height: 1.5; }
         label { font-weight: bold; display: block; margin-top: 10px; }
-        select, input { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;}
+        select, input[type="text"], input[type="number"], input[type="date"], input[list] { 
+            width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;
+        }
+        .checkbox-group {
+            border: 1px solid #ccc; padding: 10px; border-radius: 4px; max-height: 150px; overflow-y: auto; background: #fff; margin-bottom: 10px;
+        }
+        .checkbox-label {
+            font-weight: normal; display: flex; align-items: center; gap: 8px; margin-top: 5px; cursor: pointer;
+        }
         button { background: #28a745; color: white; padding: 12px; border: none; width: 100%; cursor: pointer; font-size: 16px; font-weight: bold; border-radius: 4px; margin-top: 15px;}
         button:disabled { background: #ccc; cursor: not-allowed; }
         .loading { color: #0056b3; font-weight: bold; text-align: center; margin-top: 20px; }
@@ -46,15 +54,15 @@
         <select id="segmento" required></select>
 
         <label>Número de Prof/Coord Acompanhantes:</label>
-        <select id="acompanhantes" required></select>
+        <input type="number" id="acompanhantes" min="0" placeholder="Ex: 2" required>
 
         <label>Selecionar os Instrutores Presentes:</label>
-        <select id="instrutores" required>
-            <option value="">Selecione o local primeiro...</option>
-        </select>
+        <div id="instrutoresContainer" class="checkbox-group">
+            <i>Selecione o local primeiro...</i>
+        </div>
 
         <label>Quantidade de Alunos:</label>
-        <input type="number" id="alunos" required>
+        <input type="number" id="alunos" min="1" required>
 
         <label>Fotos (Máximo 10):</label>
         <input type="file" id="fotos" multiple accept="image/*" onchange="converterFotos(this)">
@@ -75,24 +83,14 @@
                 .then(data => {
                     dadosGlobais = data;
                     
-                    // 1. Extrair os Locais únicos (Regionais) que estão na coluna 1 do array
                     const locaisUnicos = [...new Set(data.locais.map(r => r[1]))];
                     popularSelect("local", locaisUnicos);
                     
-                    // 2. Preencher os demais campos simples
                     popularSelect("oficina", data.oficinas);
                     popularSelect("turno", data.turnos);
                     popularSelect("turma", data.turmas);
                     popularSelect("segmento", data.segmentos);
                     
-                    // Tratamento caso a aba de acompanhantes esteja vazia
-                    if(data.acompanhantes && data.acompanhantes.length > 0) {
-                        popularSelect("acompanhantes", data.acompanhantes);
-                    } else {
-                        document.getElementById("acompanhantes").innerHTML = '<option value="Nenhum">Nenhum</option>';
-                    }
-                    
-                    // 3. Preencher Instituições no Datalist
                     const datalist = document.getElementById("listaInstituicoes");
                     if(data.instituicoes) {
                         [...new Set(data.instituicoes)].forEach(inst => {
@@ -100,7 +98,6 @@
                         });
                     }
 
-                    // Esconde a mensagem de carregamento e mostra o formulário
                     document.getElementById("status").style.display = "none";
                     document.getElementById("formOficina").style.display = "block";
                 })
@@ -119,30 +116,39 @@
             });
         }
 
-        // Função que roda sempre que a Regional (Local) é alterada
         function filtrarCidadeEInstrutores() {
             const localSelecionado = document.getElementById("local").value;
             
-            // FILTRAR CIDADES (Estão na coluna de índice 2 da aba Locais)
+            // FILTRAR CIDADES
             const cidadesFiltradas = dadosGlobais.locais
                 .filter(r => r[1] === localSelecionado)
                 .map(r => r[2]);
             popularSelect("cidade", cidadesFiltradas);
 
-            // FILTRAR INSTRUTORES
-            // Nota: Adicionei uma verificação flexível porque na planilha tem "Governador" e "Gov."
+            // FILTRAR INSTRUTORES (AGORA COM CHECKBOXES)
+            const instrutoresContainer = document.getElementById("instrutoresContainer");
+            instrutoresContainer.innerHTML = ""; // Limpa a lista atual
+            
             const instrutoresFiltrados = dadosGlobais.instrutoresData
                 .filter(r => {
                     const regionalDoInstrutor = r[3] || "";
                     return regionalDoInstrutor === localSelecionado || 
                           (localSelecionado.includes("Governador") && regionalDoInstrutor.includes("Gov."));
                 })
-                .map(r => r[1]); // Pega apenas o nome do instrutor (índice 1)
+                .map(r => r[1]);
                 
-            popularSelect("instrutores", instrutoresFiltrados);
+            if (instrutoresFiltrados.length === 0) {
+                instrutoresContainer.innerHTML = "<i>Nenhum instrutor encontrado.</i>";
+            } else {
+                instrutoresFiltrados.forEach(instrutor => {
+                    const label = document.createElement("label");
+                    label.className = "checkbox-label";
+                    label.innerHTML = `<input type="checkbox" name="instrutorCheck" value="${instrutor}"> ${instrutor}`;
+                    instrutoresContainer.appendChild(label);
+                });
+            }
         }
 
-        // Converte as fotos para Base64 para enviar ao Apps Script
         function converterFotos(input) {
             fotosBase64 = [];
             if (input.files.length > 10) { alert("Máximo 10 fotos permitidas!"); input.value = ""; return; }
@@ -160,10 +166,20 @@
             });
         }
 
-        // Evento de envio do formulário
         document.getElementById("formOficina").onsubmit = (e) => {
             e.preventDefault();
             const btn = document.getElementById("btnEnviar");
+
+            // Validação dos instrutores (garantir que pelo menos um foi marcado)
+            const checkboxes = document.querySelectorAll('input[name="instrutorCheck"]:checked');
+            if (checkboxes.length === 0) {
+                alert("Por favor, selecione pelo menos um instrutor presente.");
+                return; // Impede o envio se nenhum estiver marcado
+            }
+            
+            // Transforma os selecionados em um texto separado por vírgula (Ex: "Iago, Ingrid, Liliane")
+            const instrutoresSelecionados = Array.from(checkboxes).map(cb => cb.value).join(", ");
+
             btn.innerText = "Salvando na planilha e no Drive...";
             btn.disabled = true;
 
@@ -176,8 +192,8 @@
                 instituicao: document.getElementById("instituicao").value,
                 turma: document.getElementById("turma").value,
                 segmento: document.getElementById("segmento").value,
-                acompanhantes: document.getElementById("acompanhantes").value,
-                instrutores: document.getElementById("instrutores").value,
+                acompanhantes: document.getElementById("acompanhantes").value, // Agora puxa o número digitado
+                instrutores: instrutoresSelecionados, // Envia a string com os nomes marcados
                 alunos: document.getElementById("alunos").value,
                 fotos: fotosBase64
             };
@@ -191,7 +207,7 @@
             .then(res => {
                 if(res.status === "success") {
                     alert("Dados e fotos salvos com sucesso!");
-                    location.reload(); // Recarrega a página para limpar o form
+                    location.reload(); 
                 } else {
                     alert("Erro ao salvar: " + res.message);
                     btn.innerText = "Enviar Formulário";
