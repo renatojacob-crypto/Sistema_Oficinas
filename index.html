@@ -1,52 +1,57 @@
 <!DOCTYPE html>
-<html>
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <title>Sistema de Oficinas</title>
     <style>
         body { font-family: sans-serif; padding: 20px; max-width: 500px; margin: auto; line-height: 1.5; }
         label { font-weight: bold; display: block; margin-top: 10px; }
-        select, input { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
-        button { background: #28a745; color: white; padding: 10px; border: none; width: 100%; cursor: pointer; }
-        .loading { color: blue; font-style: italic; }
+        select, input { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;}
+        button { background: #28a745; color: white; padding: 12px; border: none; width: 100%; cursor: pointer; font-size: 16px; font-weight: bold; border-radius: 4px; margin-top: 15px;}
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        .loading { color: #0056b3; font-weight: bold; text-align: center; margin-top: 20px; }
     </style>
 </head>
 <body>
 
     <h2>Registro de Oficina</h2>
-    <div id="status" class="loading">Carregando dados da planilha...</div>
+    <div id="status" class="loading">Carregando dados da planilha... aguarde.</div>
 
     <form id="formOficina" style="display:none;">
         <label>Data da Oficina:</label>
         <input type="date" id="dataOficina" required>
 
-        <label>Local da Oficina:</label>
+        <label>Qual o local da Oficina?</label>
         <select id="local" onchange="filtrarCidadeEInstrutores()" required></select>
 
-        <label>Cidade:</label>
-        <input type="text" id="cidade" readonly>
+        <label>Cidade da Oficina:</label>
+        <select id="cidade" required>
+            <option value="">Selecione o local primeiro...</option>
+        </select>
 
-        <label>Oficina Realizada:</label>
+        <label>Qual a oficina realizada?</label>
         <select id="oficina" required></select>
 
-        <label>Turno:</label>
+        <label>Turno da Oficina:</label>
         <select id="turno" required></select>
 
-        <label>Nome da Instituição:</label>
-        <input list="listaInstituicoes" id="instituicao" required>
+        <label>Nome da Instituição de Ensino:</label>
+        <input list="listaInstituicoes" id="instituicao" autocomplete="off" placeholder="Digite ou selecione..." required>
         <datalist id="listaInstituicoes"></datalist>
 
-        <label>Ano e Turma:</label>
+        <label>Ano e Turma dos Alunos:</label>
         <select id="turma" required></select>
 
         <label>Segmento Educacional:</label>
         <select id="segmento" required></select>
 
-        <label>Acompanhantes (Prof/Coord):</label>
+        <label>Número de Prof/Coord Acompanhantes:</label>
         <select id="acompanhantes" required></select>
 
-        <label>Instrutores Presentes:</label>
-        <select id="instrutores" required></select>
+        <label>Selecionar os Instrutores Presentes:</label>
+        <select id="instrutores" required>
+            <option value="">Selecione o local primeiro...</option>
+        </select>
 
         <label>Quantidade de Alunos:</label>
         <input type="number" id="alunos" required>
@@ -54,34 +59,55 @@
         <label>Fotos (Máximo 10):</label>
         <input type="file" id="fotos" multiple accept="image/*" onchange="converterFotos(this)">
 
-        <button type="submit" id="btnEnviar">Enviar Registro</button>
+        <button type="submit" id="btnEnviar">Enviar Formulário</button>
     </form>
 
     <script>
-        const URL_GAS = "SUA_URL_DO_WEB_APP_AQUI";
+        // COLOQUE AQUI A SUA URL DO GOOGLE APPS SCRIPT
+        const URL_GAS = "SUA_URL_DO_WEB_APP_AQUI"; 
+        
         let dadosGlobais = {};
         let fotosBase64 = [];
 
-        // 1. Busca os dados da planilha ao carregar a página
         window.onload = () => {
             fetch(URL_GAS)
                 .then(res => res.json())
                 .then(data => {
                     dadosGlobais = data;
-                    popularSelect("local", data.locais.map(r => r[0]));
+                    
+                    // 1. Extrair os Locais únicos (Regionais) que estão na coluna 1 do array
+                    const locaisUnicos = [...new Set(data.locais.map(r => r[1]))];
+                    popularSelect("local", locaisUnicos);
+                    
+                    // 2. Preencher os demais campos simples
                     popularSelect("oficina", data.oficinas);
                     popularSelect("turno", data.turnos);
                     popularSelect("turma", data.turmas);
                     popularSelect("segmento", data.segmentos);
-                    popularSelect("acompanhantes", data.acompanhantes);
                     
+                    // Tratamento caso a aba de acompanhantes esteja vazia
+                    if(data.acompanhantes && data.acompanhantes.length > 0) {
+                        popularSelect("acompanhantes", data.acompanhantes);
+                    } else {
+                        document.getElementById("acompanhantes").innerHTML = '<option value="Nenhum">Nenhum</option>';
+                    }
+                    
+                    // 3. Preencher Instituições no Datalist
                     const datalist = document.getElementById("listaInstituicoes");
-                    [...new Set(data.instituicoes)].forEach(inst => {
-                        datalist.innerHTML += `<option value="${inst}">`;
-                    });
+                    if(data.instituicoes) {
+                        [...new Set(data.instituicoes)].forEach(inst => {
+                            datalist.innerHTML += `<option value="${inst}">`;
+                        });
+                    }
 
+                    // Esconde a mensagem de carregamento e mostra o formulário
                     document.getElementById("status").style.display = "none";
                     document.getElementById("formOficina").style.display = "block";
+                })
+                .catch(err => {
+                    console.error("Erro ao carregar dados:", err);
+                    document.getElementById("status").innerText = "Erro ao carregar os dados. Verifique a URL do Script.";
+                    document.getElementById("status").style.color = "red";
                 });
         };
 
@@ -93,24 +119,33 @@
             });
         }
 
-        // 2. Lógica de dependência (Cidade e Instrutores baseados no Local)
+        // Função que roda sempre que a Regional (Local) é alterada
         function filtrarCidadeEInstrutores() {
             const localSelecionado = document.getElementById("local").value;
             
-            // Filtra Cidade
-            const linhaLocal = dadosGlobais.locais.find(r => r[0] === localSelecionado);
-            document.getElementById("cidade").value = linhaLocal ? linhaLocal[1] : "";
+            // FILTRAR CIDADES (Estão na coluna de índice 2 da aba Locais)
+            const cidadesFiltradas = dadosGlobais.locais
+                .filter(r => r[1] === localSelecionado)
+                .map(r => r[2]);
+            popularSelect("cidade", cidadesFiltradas);
 
-            // Filtra Instrutores
+            // FILTRAR INSTRUTORES
+            // Nota: Adicionei uma verificação flexível porque na planilha tem "Governador" e "Gov."
             const instrutoresFiltrados = dadosGlobais.instrutoresData
-                .filter(r => r[0] === localSelecionado)
-                .map(r => r[1]);
+                .filter(r => {
+                    const regionalDoInstrutor = r[3] || "";
+                    return regionalDoInstrutor === localSelecionado || 
+                          (localSelecionado.includes("Governador") && regionalDoInstrutor.includes("Gov."));
+                })
+                .map(r => r[1]); // Pega apenas o nome do instrutor (índice 1)
+                
             popularSelect("instrutores", instrutoresFiltrados);
         }
 
+        // Converte as fotos para Base64 para enviar ao Apps Script
         function converterFotos(input) {
             fotosBase64 = [];
-            if (input.files.length > 10) { alert("Máximo 10 fotos!"); input.value = ""; return; }
+            if (input.files.length > 10) { alert("Máximo 10 fotos permitidas!"); input.value = ""; return; }
             
             Array.from(input.files).forEach(file => {
                 const reader = new FileReader();
@@ -125,10 +160,12 @@
             });
         }
 
+        // Evento de envio do formulário
         document.getElementById("formOficina").onsubmit = (e) => {
             e.preventDefault();
-            document.getElementById("btnEnviar").innerText = "Enviando...";
-            document.getElementById("btnEnviar").disabled = true;
+            const btn = document.getElementById("btnEnviar");
+            btn.innerText = "Salvando na planilha e no Drive...";
+            btn.disabled = true;
 
             const payload = {
                 dataDaOficina: document.getElementById("dataOficina").value,
@@ -147,14 +184,25 @@
 
             fetch(URL_GAS, {
                 method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify(payload)
             })
             .then(res => res.json())
             .then(res => {
                 if(res.status === "success") {
-                    alert("Dados salvos com sucesso!");
-                    location.reload();
+                    alert("Dados e fotos salvos com sucesso!");
+                    location.reload(); // Recarrega a página para limpar o form
+                } else {
+                    alert("Erro ao salvar: " + res.message);
+                    btn.innerText = "Enviar Formulário";
+                    btn.disabled = false;
                 }
+            })
+            .catch(err => {
+                alert("Erro de conexão ao salvar.");
+                console.error(err);
+                btn.innerText = "Enviar Formulário";
+                btn.disabled = false;
             });
         };
     </script>
