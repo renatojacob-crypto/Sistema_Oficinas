@@ -2,73 +2,91 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Sistema de Oficinas</title>
-    <style>
-        body { font-family: sans-serif; padding: 20px; max-width: 500px; margin: auto; line-height: 1.5; }
-        label { font-weight: bold; display: block; margin-top: 10px; }
-        select, input[type="text"], input[type="number"], input[type="date"], input[list] { 
-            width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; box-sizing: border-box;
-        }
-        .checkbox-group {
-            border: 1px solid #ccc; padding: 10px; border-radius: 4px; max-height: 150px; overflow-y: auto; background: #fff; margin-bottom: 10px;
-        }
-        .checkbox-label {
-            font-weight: normal; display: flex; align-items: center; gap: 8px; margin-top: 5px; cursor: pointer;
-        }
-        button { background: #28a745; color: white; padding: 12px; border: none; width: 100%; cursor: pointer; font-size: 16px; font-weight: bold; border-radius: 4px; margin-top: 15px;}
-        button:disabled { background: #ccc; cursor: not-allowed; }
-        .loading { color: #0056b3; font-weight: bold; text-align: center; margin-top: 20px; }
-    </style>
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <h2>Registro de Oficina</h2>
-    <div id="status" class="loading">Carregando dados da planilha... aguarde.</div>
+    <div class="container">
+        
+        <header class="form-header">
+            <img src="LINK_DA_SUA_LOGO_AQUI.png" alt="Logomarca da Empresa" class="logo-empresa">
+            <h1>Registro<br>de Oficina</h1>
+        </header>
 
-    <form id="formOficina" style="display:none;">
-        <label>Data da Oficina:</label>
-        <input type="date" id="dataOficina" required>
+        <div id="status" class="loading">Sincronizando com o banco de dados...</div>
 
-        <label>Qual o local da Oficina?</label>
-        <select id="local" onchange="filtrarCidadeEInstrutores()" required></select>
+        <form id="formOficina" style="display:none;">
+            
+            <div class="form-group">
+                <label for="dataOficina">Data da Oficina:</label>
+                <input type="date" id="dataOficina" required>
+            </div>
 
-        <label>Cidade da Oficina:</label>
-        <select id="cidade" required>
-            <option value="">Selecione o local primeiro...</option>
-        </select>
+            <div class="form-group">
+                <label for="local">Qual o local da Oficina?</label>
+                <select id="local" onchange="filtrarCidadeEInstrutores()" required></select>
+            </div>
 
-        <label>Qual a oficina realizada?</label>
-        <select id="oficina" required></select>
+            <div class="form-group">
+                <label for="cidade">Cidade da Oficina:</label>
+                <select id="cidade" required>
+                    <option value="">Selecione o local primeiro...</option>
+                </select>
+            </div>
 
-        <label>Turno da Oficina:</label>
-        <select id="turno" required></select>
+            <div class="form-group">
+                <label for="oficina">Qual a oficina realizada?</label>
+                <select id="oficina" required></select>
+            </div>
 
-        <label>Nome da Instituição de Ensino:</label>
-        <input list="listaInstituicoes" id="instituicao" autocomplete="off" placeholder="Digite ou selecione..." required>
-        <datalist id="listaInstituicoes"></datalist>
+            <div class="form-group">
+                <label for="turno">Turno da Oficina:</label>
+                <select id="turno" required></select>
+            </div>
 
-        <label>Ano e Turma dos Alunos:</label>
-        <select id="turma" required></select>
+            <div class="form-group">
+                <label for="instituicao">Nome da Instituição de Ensino:</label>
+                <input list="listaInstituicoes" id="instituicao" autocomplete="off" placeholder="Digite ou selecione na lista..." required>
+                <datalist id="listaInstituicoes"></datalist>
+            </div>
 
-        <label>Segmento Educacional:</label>
-        <select id="segmento" required></select>
+            <div class="form-group">
+                <label for="turma">Ano e Turma dos Alunos:</label>
+                <select id="turma" required></select>
+            </div>
 
-        <label>Número de Prof/Coord Acompanhantes:</label>
-        <input type="number" id="acompanhantes" min="0" placeholder="Ex: 2" required>
+            <div class="form-group">
+                <label for="segmento">Segmento Educacional:</label>
+                <select id="segmento" required></select>
+            </div>
 
-        <label>Selecionar os Instrutores Presentes:</label>
-        <div id="instrutoresContainer" class="checkbox-group">
-            <i>Selecione o local primeiro...</i>
-        </div>
+            <div class="form-group">
+                <label for="acompanhantes">Número de Prof/Coord Acompanhantes:</label>
+                <input type="number" id="acompanhantes" min="0" placeholder="Ex: 2" required>
+            </div>
 
-        <label>Quantidade de Alunos:</label>
-        <input type="number" id="alunos" min="1" required>
+            <div class="form-group">
+                <label>Selecionar os Instrutores Presentes:</label>
+                <div id="instrutoresContainer" class="checkbox-group">
+                    <i style="color: #6b7280; font-size: 14px;">Selecione o local primeiro...</i>
+                </div>
+            </div>
 
-        <label>Fotos (Máximo 10):</label>
-        <input type="file" id="fotos" multiple accept="image/*" onchange="converterFotos(this)">
+            <div class="form-group">
+                <label for="alunos">Quantidade de Alunos:</label>
+                <input type="number" id="alunos" min="1" placeholder="Ex: 30" required>
+            </div>
 
-        <button type="submit" id="btnEnviar">Enviar Formulário</button>
-    </form>
+            <div class="form-group">
+                <label for="fotos">Fotos (Máximo 10):</label>
+                <input type="file" id="fotos" multiple accept="image/*" onchange="converterFotos(this)">
+            </div>
+
+            <button type="submit" id="btnEnviar">Enviar Formulário</button>
+        </form>
+    </div>
 
     <script>
         // COLOQUE AQUI A SUA URL DO GOOGLE APPS SCRIPT
@@ -103,8 +121,8 @@
                 })
                 .catch(err => {
                     console.error("Erro ao carregar dados:", err);
-                    document.getElementById("status").innerText = "Erro ao carregar os dados. Verifique a URL do Script.";
-                    document.getElementById("status").style.color = "red";
+                    document.getElementById("status").innerText = "Erro de conexão com o banco de dados.";
+                    document.getElementById("status").style.color = "#dc2626";
                 });
         };
 
@@ -125,9 +143,9 @@
                 .map(r => r[2]);
             popularSelect("cidade", cidadesFiltradas);
 
-            // FILTRAR INSTRUTORES (AGORA COM CHECKBOXES)
+            // FILTRAR INSTRUTORES
             const instrutoresContainer = document.getElementById("instrutoresContainer");
-            instrutoresContainer.innerHTML = ""; // Limpa a lista atual
+            instrutoresContainer.innerHTML = ""; 
             
             const instrutoresFiltrados = dadosGlobais.instrutoresData
                 .filter(r => {
@@ -138,7 +156,7 @@
                 .map(r => r[1]);
                 
             if (instrutoresFiltrados.length === 0) {
-                instrutoresContainer.innerHTML = "<i>Nenhum instrutor encontrado.</i>";
+                instrutoresContainer.innerHTML = "<i style='color: #6b7280; font-size: 14px;'>Nenhum instrutor encontrado.</i>";
             } else {
                 instrutoresFiltrados.forEach(instrutor => {
                     const label = document.createElement("label");
@@ -151,7 +169,7 @@
 
         function converterFotos(input) {
             fotosBase64 = [];
-            if (input.files.length > 10) { alert("Máximo 10 fotos permitidas!"); input.value = ""; return; }
+            if (input.files.length > 10) { alert("Limite excedido: Por favor, selecione no máximo 10 fotos."); input.value = ""; return; }
             
             Array.from(input.files).forEach(file => {
                 const reader = new FileReader();
@@ -170,17 +188,15 @@
             e.preventDefault();
             const btn = document.getElementById("btnEnviar");
 
-            // Validação dos instrutores (garantir que pelo menos um foi marcado)
             const checkboxes = document.querySelectorAll('input[name="instrutorCheck"]:checked');
             if (checkboxes.length === 0) {
                 alert("Por favor, selecione pelo menos um instrutor presente.");
-                return; // Impede o envio se nenhum estiver marcado
+                return; 
             }
             
-            // Transforma os selecionados em um texto separado por vírgula (Ex: "Iago, Ingrid, Liliane")
             const instrutoresSelecionados = Array.from(checkboxes).map(cb => cb.value).join(", ");
 
-            btn.innerText = "Salvando na planilha e no Drive...";
+            btn.innerText = "Enviando dados...";
             btn.disabled = true;
 
             const payload = {
@@ -192,8 +208,8 @@
                 instituicao: document.getElementById("instituicao").value,
                 turma: document.getElementById("turma").value,
                 segmento: document.getElementById("segmento").value,
-                acompanhantes: document.getElementById("acompanhantes").value, // Agora puxa o número digitado
-                instrutores: instrutoresSelecionados, // Envia a string com os nomes marcados
+                acompanhantes: document.getElementById("acompanhantes").value,
+                instrutores: instrutoresSelecionados,
                 alunos: document.getElementById("alunos").value,
                 fotos: fotosBase64
             };
@@ -206,10 +222,10 @@
             .then(res => res.json())
             .then(res => {
                 if(res.status === "success") {
-                    alert("Dados e fotos salvos com sucesso!");
+                    alert("Oficina registrada com sucesso!");
                     location.reload(); 
                 } else {
-                    alert("Erro ao salvar: " + res.message);
+                    alert("Falha no registro: " + res.message);
                     btn.innerText = "Enviar Formulário";
                     btn.disabled = false;
                 }

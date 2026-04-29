@@ -1,0 +1,208 @@
+/* Importação de fonte moderna do Google Fonts */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+/* Variáveis de Cores e Medidas */
+:root {
+    --primary-color: #0056b3; /* Cor principal da marca (pode alterar) */
+    --primary-hover: #004494;
+    --text-color: #333333;
+    --border-color: #d1d5db;
+    --bg-container: #ffffff;
+    --radius: 8px;
+    --transition: all 0.3s ease;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    margin: 0;
+    padding: 0;
+    color: var(--text-color);
+    /* CONFIGURAÇÃO DO BACKGROUND */
+    /* Coloque a URL da sua imagem de fundo abaixo */
+    background-image: url('LINK_DA_SUA_IMAGEM_DE_FUNDO_AQUI.jpg'); 
+    background-size: cover;
+    background-position: center;
+    background-attachment: fixed;
+    position: relative;
+    min-height: 100vh;
+}
+
+/* Truque para deixar a imagem de fundo com 30% de opacidade sem afetar o formulário */
+body::before {
+    content: "";
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(255, 255, 255, 0.85); /* Clareia o fundo, deixando a imagem sutil */
+    z-index: -1;
+}
+
+/* Container Principal (O Formulário) */
+.container {
+    max-width: 700px;
+    margin: 40px auto;
+    background-color: var(--bg-container);
+    padding: 40px;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+}
+
+/* Cabeçalho / Banner */
+.form-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 20px;
+    margin-bottom: 30px;
+}
+
+.logo-empresa {
+    max-width: 150px;
+    height: auto;
+}
+
+.form-header h1 {
+    margin: 0;
+    font-size: 24px;
+    color: var(--primary-color);
+    font-weight: 700;
+    text-align: right;
+}
+
+/* Grupos de Campos */
+.form-group {
+    margin-bottom: 20px;
+}
+
+label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #4b5563;
+    font-size: 14px;
+}
+
+/* Estilo dos Inputs e Selects */
+input[type="text"], 
+input[type="number"], 
+input[type="date"], 
+select, 
+input[list] {
+    width: 100%;
+    padding: 12px 15px;
+    border: 1px solid var(--border-color);
+    border-radius: var(--radius);
+    font-size: 15px;
+    font-family: inherit;
+    box-sizing: border-box;
+    transition: var(--transition);
+    background-color: #f9fafb;
+    color: var(--text-color);
+}
+
+/* Efeito de Foco (quando o usuário clica no campo) */
+input:focus, select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    background-color: #ffffff;
+    box-shadow: 0 0 0 3px rgba(0, 86, 179, 0.15);
+}
+
+/* Upload de Arquivos */
+input[type="file"] {
+    padding: 10px 0;
+    font-size: 14px;
+}
+
+/* Caixa de Instrutores (Checkboxes) */
+.checkbox-group {
+    border: 1px solid var(--border-color);
+    padding: 15px;
+    border-radius: var(--radius);
+    max-height: 180px;
+    overflow-y: auto;
+    background: #f9fafb;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    margin-bottom: 12px;
+    cursor: pointer;
+    font-weight: 400;
+    font-size: 15px;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 18px;
+    height: 18px;
+    cursor: pointer;
+    accent-color: var(--primary-color);
+}
+
+/* Botão Enviar */
+button {
+    background-color: var(--primary-color);
+    color: white;
+    padding: 15px;
+    border: none;
+    width: 100%;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: 600;
+    border-radius: var(--radius);
+    margin-top: 10px;
+    transition: var(--transition);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+button:hover:not(:disabled) {
+    background-color: var(--primary-hover);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 86, 179, 0.3);
+}
+
+button:disabled {
+    background-color: #9ca3af;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: none;
+}
+
+/* Status de Carregamento */
+.loading {
+    text-align: center;
+    font-size: 18px;
+    color: var(--primary-color);
+    font-weight: 600;
+    margin: 40px 0;
+    padding: 20px;
+}
+
+/* Responsividade para Celulares */
+@media (max-width: 600px) {
+    .container {
+        margin: 20px 15px;
+        padding: 25px 20px;
+    }
+
+    .form-header {
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+    }
+
+    .form-header h1 {
+        text-align: center;
+        font-size: 22px;
+    }
+
+    .logo-empresa {
+        max-width: 120px;
+    }
+}
