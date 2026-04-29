@@ -1,129 +1,162 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro de Oficinas</title>
+    <title>Sistema de Oficinas</title>
     <style>
-        body { font-family: Arial, sans-serif; padding: 20px; max-width: 600px; margin: auto; }
-        label, input, select { display: block; width: 100%; margin-bottom: 15px; }
-        button { padding: 10px 15px; background: #0056b3; color: white; border: none; cursor: pointer; }
+        body { font-family: sans-serif; padding: 20px; max-width: 500px; margin: auto; line-height: 1.5; }
+        label { font-weight: bold; display: block; margin-top: 10px; }
+        select, input { width: 100%; padding: 8px; margin-bottom: 10px; border: 1px solid #ccc; border-radius: 4px; }
+        button { background: #28a745; color: white; padding: 10px; border: none; width: 100%; cursor: pointer; }
+        .loading { color: blue; font-style: italic; }
     </style>
 </head>
 <body>
 
-<h2>Registro de Oficina</h2>
-<form id="oficinaForm">
-    
-    <label>Data da Oficina:</label>
-    <input type="date" id="dataDaOficina" required>
+    <h2>Registro de Oficina</h2>
+    <div id="status" class="loading">Carregando dados da planilha...</div>
 
-    <label>Qual o local da Oficina?</label>
-    <select id="local" onchange="atualizarDependentes()" required>
-        <option value="">Selecione...</option>
-        <option value="Local A">Local A</option>
-        <option value="Local B">Local B</option>
-        </select>
+    <form id="formOficina" style="display:none;">
+        <label>Data da Oficina:</label>
+        <input type="date" id="dataOficina" required>
 
-    <label>Cidade da Oficina?</label>
-    <input type="text" id="cidade" readonly placeholder="Preenchimento automático">
+        <label>Local da Oficina:</label>
+        <select id="local" onchange="filtrarCidadeEInstrutores()" required></select>
 
-    <label>Selecionar os Instrutores Presentes:</label>
-    <select id="instrutores" required>
-        <option value="">Aguardando seleção do local...</option>
-    </select>
+        <label>Cidade:</label>
+        <input type="text" id="cidade" readonly>
 
-    <label>Nome da Instituição de Ensino:</label>
-    <input list="instituicoesLista" id="instituicao" autocomplete="off" required>
-    <datalist id="instituicoesLista">
-        <option value="Escola Acalento">
-        <option value="Escola UNIF-CE">
-        <option value="Colégio Coedudar">
-    </datalist>
+        <label>Oficina Realizada:</label>
+        <select id="oficina" required></select>
 
-    <label>Quantidade de Alunos:</label>
-    <input type="number" id="alunos" required>
+        <label>Turno:</label>
+        <select id="turno" required></select>
 
-    <label>Fotos (Máximo de 10):</label>
-    <input type="file" id="fotos" multiple accept="image/*" onchange="validarFotos(this)">
+        <label>Nome da Instituição:</label>
+        <input list="listaInstituicoes" id="instituicao" required>
+        <datalist id="listaInstituicoes"></datalist>
 
-    <button type="submit">Enviar Formulário</button>
-</form>
+        <label>Ano e Turma:</label>
+        <select id="turma" required></select>
 
-<script>
-    const API_URL = "SUA_URL_DO_WEB_APP_AQUI"; // Cole a URL gerada no Passo 2
-    let base64Files = [];
+        <label>Segmento Educacional:</label>
+        <select id="segmento" required></select>
 
-    // Função para validar limite de 10 fotos e converter para Base64
-    function validarFotos(input) {
-        if (input.files.length > 10) {
-            alert("Por favor, selecione no máximo 10 fotos.");
-            input.value = "";
-            return;
-        }
-        
-        base64Files = [];
-        Array.from(input.files).forEach(file => {
-            let reader = new FileReader();
-            reader.onload = function(e) {
-                base64Files.push({
-                    name: file.name,
-                    mimeType: file.type,
-                    base64: e.target.result.split(',')[1] // Remove o cabeçalho do data URL
+        <label>Acompanhantes (Prof/Coord):</label>
+        <select id="acompanhantes" required></select>
+
+        <label>Instrutores Presentes:</label>
+        <select id="instrutores" required></select>
+
+        <label>Quantidade de Alunos:</label>
+        <input type="number" id="alunos" required>
+
+        <label>Fotos (Máximo 10):</label>
+        <input type="file" id="fotos" multiple accept="image/*" onchange="converterFotos(this)">
+
+        <button type="submit" id="btnEnviar">Enviar Registro</button>
+    </form>
+
+    <script>
+        const URL_GAS = "SUA_URL_DO_WEB_APP_AQUI";
+        let dadosGlobais = {};
+        let fotosBase64 = [];
+
+        // 1. Busca os dados da planilha ao carregar a página
+        window.onload = () => {
+            fetch(URL_GAS)
+                .then(res => res.json())
+                .then(data => {
+                    dadosGlobais = data;
+                    popularSelect("local", data.locais.map(r => r[0]));
+                    popularSelect("oficina", data.oficinas);
+                    popularSelect("turno", data.turnos);
+                    popularSelect("turma", data.turmas);
+                    popularSelect("segmento", data.segmentos);
+                    popularSelect("acompanhantes", data.acompanhantes);
+                    
+                    const datalist = document.getElementById("listaInstituicoes");
+                    [...new Set(data.instituicoes)].forEach(inst => {
+                        datalist.innerHTML += `<option value="${inst}">`;
+                    });
+
+                    document.getElementById("status").style.display = "none";
+                    document.getElementById("formOficina").style.display = "block";
                 });
-            };
-            reader.readAsDataURL(file);
-        });
-    }
-
-    // Lógica para preencher Cidade e Instrutor baseado no Local
-    function atualizarDependentes() {
-        const local = document.getElementById("local").value;
-        const cidadeInput = document.getElementById("cidade");
-        const instrutoresSelect = document.getElementById("instrutores");
-        
-        // Exemplo simplificado. Na prática, você buscaria isso da variável carregada do GAS
-        if(local === "Local A") {
-            cidadeInput.value = "São Luís-MA";
-            instrutoresSelect.innerHTML = "<option value='Instrutor 1'>Instrutor 1</option>";
-        } else {
-            cidadeInput.value = "";
-            instrutoresSelect.innerHTML = "<option value=''>Aguardando...</option>";
-        }
-    }
-
-    document.getElementById("oficinaForm").addEventListener("submit", function(e) {
-        e.preventDefault();
-        
-        const payload = {
-            dataDaOficina: document.getElementById("dataDaOficina").value,
-            local: document.getElementById("local").value,
-            cidade: document.getElementById("cidade").value,
-            instrutores: document.getElementById("instrutores").value,
-            instituicao: document.getElementById("instituicao").value,
-            alunos: document.getElementById("alunos").value,
-            // ... adicione os outros campos mapeados
-            fotos: base64Files
         };
 
-        // Enviar para o Google Apps Script
-        // Usamos text/plain para evitar o disparo de preflight (CORS) restrito pelo Google
-        fetch(API_URL, {
-            method: "POST",
-            headers: {
-                "Content-Type": "text/plain;charset=utf-8",
-            },
-            body: JSON.stringify(payload)
-        })
-        .then(response => response.json())
-        .then(data => {
-            if(data.status === "success"){
-                alert("Oficina registrada com sucesso!");
-                document.getElementById("oficinaForm").reset();
-                base64Files = [];
-            }
-        }).catch(err => console.error("Erro:", err));
-    });
-</script>
+        function popularSelect(id, array) {
+            const select = document.getElementById(id);
+            select.innerHTML = '<option value="">Selecione...</option>';
+            array.forEach(item => {
+                select.innerHTML += `<option value="${item}">${item}</option>`;
+            });
+        }
+
+        // 2. Lógica de dependência (Cidade e Instrutores baseados no Local)
+        function filtrarCidadeEInstrutores() {
+            const localSelecionado = document.getElementById("local").value;
+            
+            // Filtra Cidade
+            const linhaLocal = dadosGlobais.locais.find(r => r[0] === localSelecionado);
+            document.getElementById("cidade").value = linhaLocal ? linhaLocal[1] : "";
+
+            // Filtra Instrutores
+            const instrutoresFiltrados = dadosGlobais.instrutoresData
+                .filter(r => r[0] === localSelecionado)
+                .map(r => r[1]);
+            popularSelect("instrutores", instrutoresFiltrados);
+        }
+
+        function converterFotos(input) {
+            fotosBase64 = [];
+            if (input.files.length > 10) { alert("Máximo 10 fotos!"); input.value = ""; return; }
+            
+            Array.from(input.files).forEach(file => {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    fotosBase64.push({
+                        name: file.name,
+                        mimeType: file.type,
+                        base64: e.target.result.split(',')[1]
+                    });
+                };
+                reader.readAsDataURL(file);
+            });
+        }
+
+        document.getElementById("formOficina").onsubmit = (e) => {
+            e.preventDefault();
+            document.getElementById("btnEnviar").innerText = "Enviando...";
+            document.getElementById("btnEnviar").disabled = true;
+
+            const payload = {
+                dataDaOficina: document.getElementById("dataOficina").value,
+                local: document.getElementById("local").value,
+                cidade: document.getElementById("cidade").value,
+                oficina: document.getElementById("oficina").value,
+                turno: document.getElementById("turno").value,
+                instituicao: document.getElementById("instituicao").value,
+                turma: document.getElementById("turma").value,
+                segmento: document.getElementById("segmento").value,
+                acompanhantes: document.getElementById("acompanhantes").value,
+                instrutores: document.getElementById("instrutores").value,
+                alunos: document.getElementById("alunos").value,
+                fotos: fotosBase64
+            };
+
+            fetch(URL_GAS, {
+                method: "POST",
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(res => {
+                if(res.status === "success") {
+                    alert("Dados salvos com sucesso!");
+                    location.reload();
+                }
+            });
+        };
+    </script>
 </body>
 </html>
