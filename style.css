@@ -35,7 +35,7 @@ body::before {
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgb(156, 253, 156, 0.05); /* Clareia o fundo, deixando a imagem sutil */
+    background-color: rgba(156, 253, 156, 0.116); /* Clareia o fundo, deixando a imagem sutil */
     z-index: -1;
 }
 
