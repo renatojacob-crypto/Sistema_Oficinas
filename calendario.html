@@ -25,7 +25,7 @@
     </div>
 
     <script>
-        const URL_GAS = "https://script.google.com/macros/s/AKfycbxCEsmkvWPrKx7T27YebP5TMaYGAf63qTLR_spF3t7lp5tZLvVBqf0DxKyhRJAEMmZqpA/exec"; 
+        const URL_GAS = "https://script.google.com/macros/s/AKfycby7xToVGPKHlYnTn7YP3SMPdbkFjJWKD54713KvqRSvoKJGj1C42w9ymwxzqOIPX2O6BQ/exec"; 
         
         // Paleta de cores para as oficinas
         const cores = ['#0056b3', '#28a745', '#dc3545', '#ffc107', '#17a2b8', '#6f42c1', '#fd7e14', '#20c997'];
@@ -37,34 +37,27 @@
                 .then(res => res.json())
                 .then(data => {
                     const eventosCalendario = data.agendaCompleta.map(ag => {
-                        // Atribui uma cor fixa por nome de oficina
                         if(!corMapa[ag.oficina]) {
                             corMapa[ag.oficina] = cores[corIndex % cores.length];
                             corIndex++;
                         }
                         
-                        // Lida com oficinas canceladas (deixa cinza)
-                        let eventColor = ag.status === "Cancelada" ? "#9ca3af" : corMapa[ag.oficina];
-
-                        // Formata Data e Hora para o calendário
-                        // Se houver hora de início, cria evento com hora. Se não, evento de dia inteiro.
-                        let startFormat = ag.inicio ? `${ag.data}T${ag.inicio}:00` : ag.data;
-                        let endFormat = ag.fim ? `${ag.data}T${ag.fim}:00` : ag.data;
+                        let eventColor = ag.status === "Cancelada" ? "#9ca3af" : 
+                                         ag.status === "Realizada" ? "#10b981" : corMapa[ag.oficina];
 
                         return {
-                            title: (ag.status === "Cancelada" ? "[CANCELADA] " : "") + ag.title,
-                            start: startFormat,
-                            end: endFormat,
+                            title: (ag.status === "Cancelada" ? "[X] " : "") + ag.title,
+                            start: ag.start,
+                            end: ag.end,
                             color: eventColor,
-                            description: `Oficina: ${ag.oficina}\nStatus: ${ag.status || "Agendado"}`
+                            extendedProps: {
+                                status: ag.status || "Agendado",
+                                oficina: ag.oficina
+                            }
                         };
                     });
 
                     renderizarCalendario(eventosCalendario);
-                })
-                .catch(err => {
-                    document.getElementById("status").innerText = "Erro ao carregar os dados.";
-                    document.getElementById("status").style.color = "red";
                 });
         };
 

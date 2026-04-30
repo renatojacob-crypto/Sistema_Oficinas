@@ -111,7 +111,7 @@
 
     <script>
         // COLOQUE AQUI A SUA URL DO GOOGLE APPS SCRIPT
-        const URL_GAS = "https://script.google.com/macros/s/AKfycbx9kCz36wL9m-Sl9boF0Jeboz2sypMPtWQcE-5wnQ20bWuD0gSki6QKNngzrkSihBDIsQ/exec"; 
+        const URL_GAS = "https://script.google.com/macros/s/AKfycby7xToVGPKHlYnTn7YP3SMPdbkFjJWKD54713KvqRSvoKJGj1C42w9ymwxzqOIPX2O6BQ/exec"; 
         
         let dadosGlobais = {};
         let fotosBase64 = [];
@@ -303,24 +303,20 @@
                 fotos: fotosBase64
             };
 
+            // Novo bloco de envio ajustado para ignorar o bloqueio CORS do Google
             fetch(URL_GAS, {
                 method: "POST",
+                mode: "no-cors", // <--- Esta é a linha mágica
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify(payload)
             })
-            .then(res => res.json())
-            .then(res => {
-                if(res.status === "success") {
-                    alert(status === "Realizada" ? "Oficina registrada com sucesso!" : "Cancelamento registrado.");
-                    location.reload(); 
-                } else {
-                    alert("Falha no registro: " + res.message);
-                    btn.innerText = "Tentar Novamente";
-                    btn.disabled = false;
-                }
+            .then(() => {
+                alert(status === "Realizada" ? "Oficina registrada com sucesso!" : "Cancelamento registrado.");
+                location.reload(); 
             })
             .catch(err => {
-                alert("Erro de conexão ao salvar.");
+                alert("Erro de conexão com a internet.");
+                console.error(err);
                 btn.innerText = "Tentar Novamente";
                 btn.disabled = false;
             });

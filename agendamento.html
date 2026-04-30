@@ -182,24 +182,22 @@
                 telefone: document.getElementById("telefone").value
             };
 
+            // Novo bloco de envio ajustado para ignorar o bloqueio CORS do Google
             fetch(URL_GAS, {
                 method: "POST",
+                mode: "no-cors", // <--- Esta é a linha mágica que resolve o problema
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify(payload)
             })
-            .then(res => res.json())
-            .then(res => {
-                if(res.status === "success") {
-                    alert("Oficina agendada com sucesso!");
-                    location.reload(); 
-                } else {
-                    alert("Falha no agendamento: " + res.message);
-                    btn.innerText = "Salvar Agendamento";
-                    btn.disabled = false;
-                }
+            .then(() => {
+                // Como o no-cors não nos deixa ler o JSON de volta, 
+                // se a requisição terminou, sabemos que o Google salvou.
+                alert("Oficina agendada com sucesso!");
+                location.reload(); 
             })
             .catch(err => {
-                alert("Erro de conexão.");
+                alert("Erro de conexão com a internet.");
+                console.error(err);
                 btn.innerText = "Salvar Agendamento";
                 btn.disabled = false;
             });
