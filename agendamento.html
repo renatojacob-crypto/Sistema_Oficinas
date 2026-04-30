@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Agendamento de Oficinas</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+    <div class="container">
+        
+        <header class="form-header">
+            <img src="imagens/logo.png" alt="Logomarca da Empresa" class="logo-empresa">
+            <h1>Agendamento<br>de Oficina</h1>
+        </header>
+
+        <div id="status" class="loading">Sincronizando com o banco de dados...</div>
+
+        <form id="formAgendamento" style="display:none;">
+            
+            <div class="form-group">
+                <label for="regional">Regional da Oficina:</label>
+                <select id="regional" onchange="filtrarCidades()" required></select>
+            </div>
+
+            <div class="form-group">
+                <label for="cidade">Cidade da Oficina:</label>
+                <select id="cidade" required>
+                    <option value="">Selecione a regional primeiro...</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="oficina">Qual a Oficina a Realizar?</label>
+                <select id="oficina" required></select>
+            </div>
+
+            <div class="form-group">
+                <label for="dataOficina">Data da Oficina:</label>
+                <input type="date" id="dataOficina" required>
+            </div>
+
+            <div style="display: flex; gap: 15px;">
+                <div class="form-group" style="flex: 1;">
+                    <label for="horaInicio">Horário Inicial:</label>
+                    <input type="time" id="horaInicio" onchange="calcularCargaHoraria()" required>
+                </div>
+                <div class="form-group" style="flex: 1;">
+                    <label for="horaFim">Horário Final:</label>
+                    <input type="time" id="horaFim" onchange="calcularCargaHoraria()" required>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="cargaHoraria">Carga Horária Calculada:</label>
+                <input type="text" id="cargaHoraria" readonly style="background-color: #e5e7eb; font-weight: bold;" placeholder="Preenchimento automático">
+            </div>
+
+            <div class="form-group">
+                <label for="instituicao">Instituição de Ensino:</label>
+                <input list="listaInstituicoes" id="instituicao" autocomplete="off" placeholder="Digite ou selecione..." required>
+                <datalist id="listaInstituicoes"></datalist>
+            </div>
+
+            <div class="form-group">
+                <label for="endereco">Endereço Completo:</label>
+                <input type="text" id="endereco" placeholder="Rua, Número, Bairro..." required>
+            </div>
+
+            <div class="form-group">
+                <label for="contato">Nome do Contato:</label>
+                <input type="text" id="contato" placeholder="Nome do responsável no local" required>
+            </div>
+
+            <div class="form-group">
+                <label for="telefone">Telefone do Contato:</label>
+                <input type="tel" id="telefone" placeholder="(00) 00000-0000" required>
+            </div>
+
+            <button type="submit" id="btnEnviar">Salvar Agendamento</button>
+        </form>
+    </div>
+
+    <script>
+        // COLOQUE AQUI A MESMA URL DO SEU GOOGLE APPS SCRIPT
+        const URL_GAS = "SUA_URL_DO_WEB_APP_AQUI"; 
+        let dadosGlobais = {};
+
+        window.onload = () => {
+            fetch(URL_GAS)
+                .then(res => res.json())
+                .then(data => {
+                    dadosGlobais = data;
+                    
+                    const regionaisUnicas = [...new Set(data.locais.map(r => r[1]))];
+                    popularSelect("regional", regionaisUnicas);
+                    popularSelect("oficina", data.oficinas);
+                    
+                    const datalist = document.getElementById("listaInstituicoes");
+                    if(data.instituicoes) {
+                        [...new Set(data.instituicoes)].forEach(inst => {
+                            datalist.innerHTML += `<option value="${inst}">`;
+                        });
+                    }
+
+                    document.getElementById("status").style.display = "none";
+                    document.getElementById("formAgendamento").style.display = "block";
+                })
+                .catch(err => {
+                    document.getElementById("status").innerText = "Erro de conexão com o banco de dados.";
+                    document.getElementById("status").style.color = "#dc2626";
+                });
+        };
+
+        function popularSelect(id, array) {
+            const select = document.getElementById(id);
+            select.innerHTML = '<option value="">Selecione...</option>';
+            array.forEach(item => {
+                select.innerHTML += `<option value="${item}">${item}</option>`;
+            });
+        }
+
+        function filtrarCidades() {
+            const regionalSelecionada = document.getElementById("regional").value;
+            const cidadesFiltradas = dadosGlobais.locais
+                .filter(r => r[1] === regionalSelecionada)
+                .map(r => r[2]);
+            popularSelect("cidade", cidadesFiltradas);
+        }
+
+        // LÓGICA DE CÁLCULO DA CARGA HORÁRIA
+        function calcularCargaHoraria() {
+            const inicio = document.getElementById("horaInicio").value;
+            const fim = document.getElementById("horaFim").value;
+
+            if (inicio && fim) {
+                const [horaI, minI] = inicio.split(':').map(Number);
+                const [horaF, minF] = fim.split(':').map(Number);
+                
+                let minutosTotais = (horaF * 60 + minF) - (horaI * 60 + minI);
+                
+                if (minutosTotais < 0) {
+                    document.getElementById("cargaHoraria").value = "Horário final menor que inicial";
+                    return;
+                }
+
+                const horas = Math.floor(minutosTotais / 60);
+                const minutos = minutosTotais % 60;
+                
+                // Formata o texto final (ex: "2h 30m" ou "3h 00m")
+                const textoMinutos = minutos < 10 ? '0' + minutos : minutos;
+                document.getElementById("cargaHoraria").value = `${horas}h ${textoMinutos}m`;
+            }
+        }
+
+        document.getElementById("formAgendamento").onsubmit = (e) => {
+            e.preventDefault();
+            const btn = document.getElementById("btnEnviar");
+
+            // Bloqueia envio se a carga horária for inválida
+            if(document.getElementById("cargaHoraria").value === "Horário final menor que inicial") {
+                alert("Por favor, corrija os horários informados.");
+                return;
+            }
+
+            btn.innerText = "Agendando...";
+            btn.disabled = true;
+
+            const payload = {
+                regional: document.getElementById("regional").value,
+                oficina: document.getElementById("oficina").value,
+                dataOficina: document.getElementById("dataOficina").value,
+                horaInicio: document.getElementById("horaInicio").value,
+                horaFim: document.getElementById("horaFim").value,
+                cidade: document.getElementById("cidade").value,
+                cargaHoraria: document.getElementById("cargaHoraria").value,
+                instituicao: document.getElementById("instituicao").value,
+                endereco: document.getElementById("endereco").value,
+                contato: document.getElementById("contato").value,
+                telefone: document.getElementById("telefone").value
+            };
+
+            fetch(URL_GAS, {
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                body: JSON.stringify(payload)
+            })
+            .then(res => res.json())
+            .then(res => {
+                if(res.status === "success") {
+                    alert("Oficina agendada com sucesso!");
+                    location.reload(); 
+                } else {
+                    alert("Falha no agendamento: " + res.message);
+                    btn.innerText = "Salvar Agendamento";
+                    btn.disabled = false;
+                }
+            })
+            .catch(err => {
+                alert("Erro de conexão.");
+                btn.innerText = "Salvar Agendamento";
+                btn.disabled = false;
+            });
+        };
+    </script>
+</body>
+</html>
