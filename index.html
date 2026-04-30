@@ -3,240 +3,38 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sistema de Oficinas</title>
+    <title>Sistema de Oficinas - Portal</title>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-    <div class="container">
+    <div class="container" style="text-align: center;">
         
-        <header class="form-header">
-            <img src="imagens/logopreto.png" alt="Logomarca da Empresa YXZ Soluções Educacionais" class="logo-empresa">
-            <h1>Registro<br>de Oficina</h1>
+        <header class="form-header" style="flex-direction: column; text-align: center; gap: 20px;">
+            <img src="imagens/logopreto.png" alt="Logomarca da Empresa" class="logo-empresa" style="max-width: 200px;">
+            <h1 style="text-align: center;">Portal de Gestão<br>de Oficinas</h1>
         </header>
 
-        <div id="status" class="loading">Sincronizando com o banco de dados...</div>
+        <p style="margin-bottom: 30px; color: #6b7280; font-size: 16px;">Selecione a operação que deseja realizar abaixo:</p>
 
-        <form id="formOficina" style="display:none;">
-            
-            <div class="form-group">
-                <label for="dataOficina">Data da Oficina:</label>
-                <input type="date" id="dataOficina" required>
-            </div>
+        <div class="menu-grid">
+            <a href="agendamento.html" class="menu-card">
+                <div class="menu-icon">📅</div>
+                <h3>Agendamento</h3>
+                <p>Marcar novas oficinas futuras no cronograma.</p>
+            </a>
 
-            <div class="form-group">
-                <label for="local">Qual o local da Oficina?</label>
-                <select id="local" onchange="filtrarCidadeEInstrutores()" required></select>
-            </div>
+            <a href="registro.html" class="menu-card">
+                <div class="menu-icon">📝</div>
+                <h3>Registro</h3>
+                <p>Registrar a execução ou o cancelamento de uma oficina agendada.</p>
+            </a>
+        </div>
 
-            <div class="form-group">
-                <label for="cidade">Cidade da Oficina:</label>
-                <select id="cidade" required>
-                    <option value="">Selecione o local primeiro...</option>
-                </select>
-            </div>
-
-            <div class="form-group">
-                <label for="oficina">Qual a oficina realizada?</label>
-                <select id="oficina" required></select>
-            </div>
-
-            <div class="form-group">
-                <label for="turno">Turno da Oficina:</label>
-                <select id="turno" required></select>
-            </div>
-
-            <div class="form-group">
-                <label for="instituicao">Nome da Instituição de Ensino:</label>
-                <input list="listaInstituicoes" id="instituicao" autocomplete="off" placeholder="Digite ou selecione na lista..." required>
-                <datalist id="listaInstituicoes"></datalist>
-            </div>
-
-            <div class="form-group">
-                <label for="turma">Ano e Turma dos Alunos:</label>
-                <select id="turma" required></select>
-            </div>
-
-            <div class="form-group">
-                <label for="segmento">Segmento Educacional:</label>
-                <select id="segmento" required></select>
-            </div>
-
-            <div class="form-group">
-                <label for="acompanhantes">Número de Prof/Coord Acompanhantes:</label>
-                <input type="number" id="acompanhantes" min="0" placeholder="Ex: 2" required>
-            </div>
-
-            <div class="form-group">
-                <label>Selecionar os Instrutores Presentes:</label>
-                <div id="instrutoresContainer" class="checkbox-group">
-                    <i style="color: #6b7280; font-size: 14px;">Selecione o local primeiro...</i>
-                </div>
-            </div>
-
-            <div class="form-group">
-                <label for="alunos">Quantidade de Alunos:</label>
-                <input type="number" id="alunos" min="1" placeholder="Ex: 30" required>
-            </div>
-
-            <div class="form-group">
-                <label for="fotos">Fotos (Máximo 10):</label>
-                <input type="file" id="fotos" multiple accept="image/*" onchange="converterFotos(this)">
-            </div>
-
-            <button type="submit" id="btnEnviar">Enviar Formulário</button>
-        </form>
+        <footer style="margin-top: 40px; font-size: 12px; color: #9ca3af;">
+            Sistema de Monitoramento de Projetos Educacionais
+        </footer>
     </div>
 
-    <script>
-        // COLOQUE AQUI A SUA URL DO GOOGLE APPS SCRIPT
-        const URL_GAS = "https://script.google.com/macros/s/AKfycbzkvJqfTXRwOcJVO63UUbTkcTjbpAY3rvdSSsdDNbFqsBjmgzun7P1-wVVt9CkAD6cpWw/exec"; 
-        
-        let dadosGlobais = {};
-        let fotosBase64 = [];
-
-        window.onload = () => {
-            fetch(URL_GAS)
-                .then(res => res.json())
-                .then(data => {
-                    dadosGlobais = data;
-                    
-                    const locaisUnicos = [...new Set(data.locais.map(r => r[1]))];
-                    popularSelect("local", locaisUnicos);
-                    
-                    popularSelect("oficina", data.oficinas);
-                    popularSelect("turno", data.turnos);
-                    popularSelect("turma", data.turmas);
-                    popularSelect("segmento", data.segmentos);
-                    
-                    const datalist = document.getElementById("listaInstituicoes");
-                    if(data.instituicoes) {
-                        [...new Set(data.instituicoes)].forEach(inst => {
-                            datalist.innerHTML += `<option value="${inst}">`;
-                        });
-                    }
-
-                    document.getElementById("status").style.display = "none";
-                    document.getElementById("formOficina").style.display = "block";
-                })
-                .catch(err => {
-                    console.error("Erro ao carregar dados:", err);
-                    document.getElementById("status").innerText = "Erro de conexão com o banco de dados.";
-                    document.getElementById("status").style.color = "#dc2626";
-                });
-        };
-
-        function popularSelect(id, array) {
-            const select = document.getElementById(id);
-            select.innerHTML = '<option value="">Selecione...</option>';
-            array.forEach(item => {
-                select.innerHTML += `<option value="${item}">${item}</option>`;
-            });
-        }
-
-        function filtrarCidadeEInstrutores() {
-            const localSelecionado = document.getElementById("local").value;
-            
-            // FILTRAR CIDADES
-            const cidadesFiltradas = dadosGlobais.locais
-                .filter(r => r[1] === localSelecionado)
-                .map(r => r[2]);
-            popularSelect("cidade", cidadesFiltradas);
-
-            // FILTRAR INSTRUTORES
-            const instrutoresContainer = document.getElementById("instrutoresContainer");
-            instrutoresContainer.innerHTML = ""; 
-            
-            const instrutoresFiltrados = dadosGlobais.instrutoresData
-                .filter(r => {
-                    const regionalDoInstrutor = r[3] || "";
-                    return regionalDoInstrutor === localSelecionado || 
-                          (localSelecionado.includes("Governador") && regionalDoInstrutor.includes("Gov."));
-                })
-                .map(r => r[1]);
-                
-            if (instrutoresFiltrados.length === 0) {
-                instrutoresContainer.innerHTML = "<i style='color: #6b7280; font-size: 14px;'>Nenhum instrutor encontrado.</i>";
-            } else {
-                instrutoresFiltrados.forEach(instrutor => {
-                    const label = document.createElement("label");
-                    label.className = "checkbox-label";
-                    label.innerHTML = `<input type="checkbox" name="instrutorCheck" value="${instrutor}"> ${instrutor}`;
-                    instrutoresContainer.appendChild(label);
-                });
-            }
-        }
-
-        function converterFotos(input) {
-            fotosBase64 = [];
-            if (input.files.length > 10) { alert("Limite excedido: Por favor, selecione no máximo 10 fotos."); input.value = ""; return; }
-            
-            Array.from(input.files).forEach(file => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    fotosBase64.push({
-                        name: file.name,
-                        mimeType: file.type,
-                        base64: e.target.result.split(',')[1]
-                    });
-                };
-                reader.readAsDataURL(file);
-            });
-        }
-
-        document.getElementById("formOficina").onsubmit = (e) => {
-            e.preventDefault();
-            const btn = document.getElementById("btnEnviar");
-
-            const checkboxes = document.querySelectorAll('input[name="instrutorCheck"]:checked');
-            if (checkboxes.length === 0) {
-                alert("Por favor, selecione pelo menos um instrutor presente.");
-                return; 
-            }
-            
-            const instrutoresSelecionados = Array.from(checkboxes).map(cb => cb.value).join(", ");
-
-            btn.innerText = "Enviando dados...";
-            btn.disabled = true;
-
-            const payload = {
-                dataDaOficina: document.getElementById("dataOficina").value,
-                local: document.getElementById("local").value,
-                cidade: document.getElementById("cidade").value,
-                oficina: document.getElementById("oficina").value,
-                turno: document.getElementById("turno").value,
-                instituicao: document.getElementById("instituicao").value,
-                turma: document.getElementById("turma").value,
-                segmento: document.getElementById("segmento").value,
-                acompanhantes: document.getElementById("acompanhantes").value,
-                instrutores: instrutoresSelecionados,
-                alunos: document.getElementById("alunos").value,
-                fotos: fotosBase64
-            };
-
-            fetch(URL_GAS, {
-                method: "POST",
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
-                body: JSON.stringify(payload)
-            })
-            .then(res => res.json())
-            .then(res => {
-                if(res.status === "success") {
-                    alert("Oficina registrada com sucesso!");
-                    location.reload(); 
-                } else {
-                    alert("Falha no registro: " + res.message);
-                    btn.innerText = "Enviar Formulário";
-                    btn.disabled = false;
-                }
-            })
-            .catch(err => {
-                alert("Erro de conexão ao salvar.");
-                console.error(err);
-                btn.innerText = "Enviar Formulário";
-                btn.disabled = false;
-            });
-        };
-    </script>
 </body>
 </html>
