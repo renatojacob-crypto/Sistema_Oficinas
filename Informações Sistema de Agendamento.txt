@@ -1,0 +1,6 @@
+Informações Sistema de Agendamento Oficinas
+ID da pasta Fotos Oficinas no Google Drive - 1KN6RycF4S0kJJM87vAgwJVZrXFxhq9un
+ID da pasta Sistema de Oficinas - 1p_o9qAoiFgp6SgJd1XWoSWjJjhKIp3jn
+
+URL do APP Script:
+https://script.google.com/macros/s/AKfycbytJg8ZyBU0TK2XGCVXXdmMruuVdabwA1BUxiG7VbhneC0FVQlLumjgZ8oLXf7m4iPl/exec
