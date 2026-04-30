@@ -142,7 +142,7 @@
                 return (!inicio || d >= inicio) && (!fim || d <= fim) && (oficina === "Todas" || item.oficina === oficina);
             };
 
-            const ags = rawData.agendamentos.filter(filtrar);
+            const ags = rawData.agendamentosDashboard.filter(filtrar);
             const resps = rawData.realizadas.filter(filtrar);
 
             // KPIs
