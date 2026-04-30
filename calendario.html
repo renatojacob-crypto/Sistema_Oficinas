@@ -9,6 +9,18 @@
     <style>
         #calendar { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
         .fc-event { cursor: pointer; border: none; padding: 2px 4px; }
+        .filter-container { 
+            background: white; 
+            padding: 15px 20px; 
+            border-radius: 8px; 
+            margin-bottom: 20px; 
+            display: flex; 
+            align-items: center; 
+            gap: 15px; 
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+        }
+        .filter-container label { margin: 0; font-weight: 600; color: var(--text-color); }
+        .filter-container select { width: auto; margin-bottom: 0; padding: 8px 15px; }
     </style>
 </head>
 <body>
@@ -20,17 +32,26 @@
             <h1>Calendário de Agendamentos</h1>
         </header>
 
-        <div id="status" class="loading">Carregando calendário...</div>
+        <div class="filter-container">
+            <label for="filtroStatus">Filtrar por Status:</label>
+            <select id="filtroStatus" onchange="filtrarAgenda()">
+                <option value="Todos">Exibir Todos</option>
+                <option value="Agendada">Apenas Agendadas</option>
+                <option value="Realizada">Apenas Realizadas</option>
+                <option value="Cancelada">Apenas Canceladas</option>
+            </select>
+        </div>
+
+        <div id="status" class="loading">Sincronizando cronograma...</div>
         <div id="calendar" style="display:none;"></div>
     </div>
 
     <script src="config.js"></script>
 
     <script>
-        // O código da página continua aqui...
-        let dadosGlobais = {};
-        
-        // Paleta de cores para as oficinas
+        let todosEventos = []; // Armazena todos os eventos originais
+        let calendar; // Variável global para a instância do calendário
+
         const cores = ['#0056b3', '#28a745', '#dc3545', '#ffc107', '#17a2b8', '#6f42c1', '#fd7e14', '#20c997'];
         let corMapa = {};
         let corIndex = 0;
@@ -39,37 +60,43 @@
             fetch(URL_GAS)
                 .then(res => res.json())
                 .then(data => {
-                    const eventosCalendario = data.agendaCompleta.map(ag => {
+                    // Prepara e formata todos os eventos vindos do banco de dados
+                    todosEventos = data.agendaCompleta.map(ag => {
                         if(!corMapa[ag.oficina]) {
                             corMapa[ag.oficina] = cores[corIndex % cores.length];
                             corIndex++;
                         }
                         
-                        let eventColor = ag.status === "Cancelada" ? "#9ca3af" : 
-                                         ag.status === "Realizada" ? "#10b981" : corMapa[ag.oficina];
+                        let statusLimpo = ag.status || "Agendada";
+                        let eventColor = statusLimpo === "Cancelada" ? "#9ca3af" : 
+                                         statusLimpo === "Realizada" ? "#10b981" : corMapa[ag.oficina];
 
                         return {
-                            title: (ag.status === "Cancelada" ? "[X] " : "") + ag.title,
+                            title: (statusLimpo === "Cancelada" ? "[X] " : "") + ag.title,
                             start: ag.start,
                             end: ag.end,
                             color: eventColor,
                             extendedProps: {
-                                status: ag.status || "Agendado",
+                                status: statusLimpo,
                                 oficina: ag.oficina
                             }
                         };
                     });
 
-                    renderizarCalendario(eventosCalendario);
+                    renderizarCalendario(todosEventos);
+                })
+                .catch(err => {
+                    document.getElementById("status").innerText = "Erro ao carregar os agendamentos.";
+                    document.getElementById("status").style.color = "red";
                 });
         };
 
-        function renderizarCalendario(eventos) {
+        function renderizarCalendario(eventosParaExibir) {
             document.getElementById("status").style.display = "none";
             const calendarEl = document.getElementById('calendar');
             calendarEl.style.display = "block";
 
-            const calendar = new FullCalendar.Calendar(calendarEl, {
+            calendar = new FullCalendar.Calendar(calendarEl, {
                 initialView: 'dayGridMonth',
                 locale: 'pt-br',
                 headerToolbar: {
@@ -77,12 +104,28 @@
                     center: 'title',
                     right: 'dayGridMonth,timeGridWeek,timeGridDay'
                 },
-                events: eventos,
+                events: eventosParaExibir,
                 eventClick: function(info) {
-                    alert(info.event.extendedProps.description + "\nHorário: " + info.event.start.toLocaleString());
+                    alert("Oficina: " + info.event.extendedProps.oficina + 
+                          "\nStatus: " + info.event.extendedProps.status + 
+                          "\nHorário: " + info.event.start.toLocaleString());
                 }
             });
             calendar.render();
+        }
+
+        // FUNÇÃO QUE EXECUTA O FILTRO
+        function filtrarAgenda() {
+            const filtro = document.getElementById("filtroStatus").value;
+            
+            // Filtra os eventos baseados na escolha
+            const eventosFiltrados = (filtro === "Todos") 
+                ? todosEventos 
+                : todosEventos.filter(ev => ev.extendedProps.status === filtro);
+
+            // Remove todos os eventos atuais e adiciona apenas os filtrados
+            calendar.removeAllEvents();
+            calendar.addEventSource(eventosFiltrados);
         }
     </script>
 </body>
