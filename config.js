@@ -1,0 +1,1 @@
+const URL_GAS = "https://script.google.com/macros/s/AKfycbzAsVdZ_MmTVqMVQK4DXHePHtys4Xca-dUjTrUNm-ViQLefPaux22jwkVEDXHbBGgLgiA/exec";
