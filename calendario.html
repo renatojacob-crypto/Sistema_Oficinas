@@ -7,17 +7,18 @@
     <link rel="stylesheet" href="style.css">
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
     <style>
-        #calendar { background: white; padding: 20px; border-radius: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.05); }
-        .fc-event { cursor: pointer; border: none; padding: 2px 4px; }
+        #calendar { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
+        .fc-event { cursor: pointer; border: none; padding: 3px 6px; border-radius: 4px; font-size: 0.85em; }
         .filter-container { 
             background: white; 
             padding: 15px 20px; 
-            border-radius: 8px; 
+            border-radius: 12px; 
             margin-bottom: 20px; 
             display: flex; 
             align-items: center; 
             gap: 15px; 
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+            border: 1px solid var(--border-color);
         }
         .filter-container label { margin: 0; font-weight: 600; color: var(--text-color); }
         .filter-container select { width: auto; margin-bottom: 0; padding: 8px 15px; }
@@ -25,69 +26,82 @@
 </head>
 <body>
 
-    <div class="container" style="max-width: 1000px;">
-        <a href="index.html" style="text-decoration: none; color: var(--primary-color); font-weight: 600;">← Voltar ao Início</a>
+    <div class="container" style="max-width: 1100px; background-color: transparent; box-shadow: none; margin-top: 20px;">
+        <a href="index.html" style="text-decoration: none; color: var(--primary-color); font-weight: 700;">← Voltar ao Início</a>
         
-        <header class="form-header" style="margin-top: 15px;">
-            <h1>Calendário de Agendamentos</h1>
+        <header class="form-header" style="margin-top: 15px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
+            <h1 style="color: var(--primary-color); margin: 0;">🗓️ Cronograma de Oficinas</h1>
         </header>
 
         <div class="filter-container">
-            <label for="filtroStatus">Filtrar por Status:</label>
+            <label for="filtroStatus">Filtrar Status:</label>
             <select id="filtroStatus" onchange="filtrarAgenda()">
-                <option value="Todos">Exibir Todos</option>
-                <option value="Agendada">Apenas Agendadas</option>
-                <option value="Realizada">Apenas Realizadas</option>
-                <option value="Cancelada">Apenas Canceladas</option>
+                <option value="Todos">Exibir Tudo</option>
+                <option value="Agendada">Agendadas</option>
+                <option value="Realizada">Realizadas</option>
+                <option value="Cancelada">Canceladas</option>
             </select>
         </div>
 
-        <div id="status" class="loading">Sincronizando cronograma...</div>
+        <div id="status" class="loading" style="background: white; border-radius: 12px; padding: 40px;">Sincronizando agendamentos...</div>
         <div id="calendar" style="display:none;"></div>
     </div>
 
     <script src="config.js"></script>
 
     <script>
-        let todosEventos = []; // Armazena todos os eventos originais
-        let calendar; // Variável global para a instância do calendário
+        let todosEventos = []; 
+        let calendar; 
 
         const cores = ['#0056b3', '#28a745', '#dc3545', '#ffc107', '#17a2b8', '#6f42c1', '#fd7e14', '#20c997'];
         let corMapa = {};
         let corIndex = 0;
 
         window.onload = () => {
+            if (typeof URL_GAS === 'undefined') {
+                document.getElementById("status").innerText = "Erro: URL do banco de dados não encontrada no config.js.";
+                return;
+            }
+
             fetch(URL_GAS)
                 .then(res => res.json())
                 .then(data => {
-                    // Prepara e formata todos os eventos vindos do banco de dados
-                    todosEventos = data.agendaCompleta.map(ag => {
-                        if(!corMapa[ag.oficina]) {
-                            corMapa[ag.oficina] = cores[corIndex % cores.length];
-                            corIndex++;
-                        }
-                        
-                        let statusLimpo = ag.status || "Agendada";
-                        let eventColor = statusLimpo === "Cancelada" ? "#9ca3af" : 
-                                         statusLimpo === "Realizada" ? "#10b981" : corMapa[ag.oficina];
+                    // Verifica se o banco de dados retornou a lista de agenda
+                    if (!data.agendaCompleta) {
+                        document.getElementById("status").innerText = "Atenção: Não foi possível ler a lista de agendamentos.";
+                        return;
+                    }
 
-                        return {
-                            title: (statusLimpo === "Cancelada" ? "[X] " : "") + ag.title,
-                            start: ag.start,
-                            end: ag.end,
-                            color: eventColor,
-                            extendedProps: {
-                                status: statusLimpo,
-                                oficina: ag.oficina
+                    // Prepara os eventos filtrando entradas sem data válida
+                    todosEventos = data.agendaCompleta
+                        .filter(ag => ag.start && ag.start !== "") // Pula agendamentos sem data
+                        .map(ag => {
+                            if(!corMapa[ag.oficina]) {
+                                corMapa[ag.oficina] = cores[corIndex % cores.length];
+                                corIndex++;
                             }
-                        };
-                    });
+                            
+                            let statusLimpo = ag.status || "Agendada";
+                            let eventColor = statusLimpo === "Cancelada" ? "#9ca3af" : 
+                                             statusLimpo === "Realizada" ? "#10b981" : corMapa[ag.oficina];
+
+                            return {
+                                title: (statusLimpo === "Cancelada" ? "[X] " : "") + ag.title,
+                                start: ag.start,
+                                end: ag.end,
+                                color: eventColor,
+                                extendedProps: {
+                                    status: statusLimpo,
+                                    oficina: ag.oficina
+                                }
+                            };
+                        });
 
                     renderizarCalendario(todosEventos);
                 })
                 .catch(err => {
-                    document.getElementById("status").innerText = "Erro ao carregar os agendamentos.";
-                    document.getElementById("status").style.color = "red";
+                    document.getElementById("status").innerText = "Erro de sincronização. Verifique sua conexão ou a planilha.";
+                    console.error(err);
                 });
         };
 
@@ -108,22 +122,19 @@
                 eventClick: function(info) {
                     alert("Oficina: " + info.event.extendedProps.oficina + 
                           "\nStatus: " + info.event.extendedProps.status + 
-                          "\nHorário: " + info.event.start.toLocaleString());
+                          "\nInício: " + info.event.start.toLocaleString());
                 }
             });
             calendar.render();
         }
 
-        // FUNÇÃO QUE EXECUTA O FILTRO
         function filtrarAgenda() {
+            if (!calendar) return;
             const filtro = document.getElementById("filtroStatus").value;
-            
-            // Filtra os eventos baseados na escolha
             const eventosFiltrados = (filtro === "Todos") 
                 ? todosEventos 
                 : todosEventos.filter(ev => ev.extendedProps.status === filtro);
 
-            // Remove todos os eventos atuais e adiciona apenas os filtrados
             calendar.removeAllEvents();
             calendar.addEventSource(eventosFiltrados);
         }
