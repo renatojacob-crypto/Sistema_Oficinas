@@ -5,39 +5,67 @@
     <title>Conferência Escala vs Realizado</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .match { color: green; font-weight: bold; }
-        .mismatch { color: red; font-weight: bold; }
+        .match { color: #10b981; font-weight: bold; } /* Verde sucesso */
+        .mismatch { color: #ef4444; font-weight: bold; } /* Vermelho erro */
+        .table-container { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 20px;}
+        table { width: 100%; border-collapse: collapse; }
+        th { background: var(--primary-color); color: white; padding: 12px; text-align: left; font-size: 14px;}
+        td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px;}
+        tr:hover { background: #f9fafb; }
     </style>
 </head>
 <body>
-    <div class="container" style="max-width: 1000px;">
-        <a href="index.html">← Voltar</a>
-        <h1>Relatório Comparativo Instrutores e Oficinas</h1>
+    <div class="container" style="max-width: 1100px;">
+        <a href="index.html" style="text-decoration: none; color: var(--primary-color); font-weight: 700;">← Voltar ao Início</a>
         
-        <div class="card-white" style="display:flex; gap:10px; margin-bottom:20px; align-items: flex-end;">
-            <div><label>Início:</label><input type="date" id="fInicio"></div>
-            <div><label>Fim:</label><input type="date" id="fFim"></div>
-            <button onclick="gerarRelatorio()" style="width:auto;">Filtrar</button>
+        <header class="form-header" style="margin-top: 15px;">
+            <h1 style="color: var(--primary-color); margin: 0;">Relatório: Escala vs Realizado</h1>
+        </header>
+        
+        <!-- BARRA DE FILTROS -->
+        <div class="table-container" style="display:flex; gap:15px; align-items: flex-end; background: #f9fafb;">
+            <div>
+                <label style="font-weight: 600; font-size: 13px;">Data Início:</label>
+                <input type="date" id="fInicio" style="margin-bottom: 0;">
+            </div>
+            <div>
+                <label style="font-weight: 600; font-size: 13px;">Data Fim:</label>
+                <input type="date" id="fFim" style="margin-bottom: 0;">
+            </div>
+            <button onclick="gerarRelatorio()" style="width:auto; margin: 0; padding: 10px 25px;">Filtrar</button>
         </div>
 
-        <table id="tabelaComparativa">
-            <thead>
-                <tr>
-                    <th>Data</th>
-                    <th>Oficina</th>
-                    <th>Escalados</th>
-                    <th>Realizaram</th>
-                    <th>Status</th>
-                </tr>
-            </thead>
-            <tbody></tbody>
-        </table>
+        <!-- TABELA -->
+        <div class="table-container">
+            <table id="tabelaComparativa">
+                <thead>
+                    <tr>
+                        <th>Data</th>
+                        <th>Oficina</th>
+                        <th>Instrutores Escalados</th>
+                        <th>Quem Realizou (Registro)</th>
+                        <th>Status</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td colspan="5" style="text-align:center;">Carregando dados do servidor...</td></tr>
+                </tbody>
+            </table>
+        </div>
     </div>
 
     <script src="config.js"></script>
     <script>
         let db = {};
-        window.onload = () => { fetch(URL_GAS).then(res => res.json()).then(data => db = data); };
+        
+        window.onload = () => { 
+            fetch(URL_GAS)
+                .then(res => res.json())
+                .then(data => {
+                    db = data;
+                    gerarRelatorio(); // Ao carregar, já exibe a tabela completa
+                }); 
+        };
 
         function gerarRelatorio() {
             const inicio = document.getElementById("fInicio").value;
@@ -45,23 +73,40 @@
             const tbody = document.querySelector("#tabelaComparativa tbody");
             tbody.innerHTML = "";
 
-            // Cruzamento de dados: Para cada Escala, busca a Resposta correspondente
+            if (!db.escala || db.escala.length === 0) {
+                tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;'>Nenhuma escala lançada ainda.</td></tr>";
+                return;
+            }
+
             db.escala.forEach(esc => {
-                const dataEsc = esc[1]; // Ajustar índice conforme sua planilha Escala
+                // CORREÇÃO AQUI: Lendo pelo nome exato em vez de números
+                const dataEsc = esc.data; 
+                const oficinaEsc = esc.oficina;
+                const instrutoresEsc = esc.instrutoresEscalados;
+
+                // Aplica o filtro de datas
                 if ((inicio && dataEsc < inicio) || (fim && dataEsc > fim)) return;
 
-                // Busca registro na aba Respostas (Realizadas)
-                const real = db.realizadas.find(r => r.data === dataEsc && r.oficina === esc[3]);
-                const instrutoresReal = real ? real.instrutores : "Não realizada";
-                const isMatch = real && real.instrutores === esc[5];
+                // Formata a data de AAAA-MM-DD para DD/MM/AAAA para ficar bonito na tela
+                let dataFormatada = dataEsc;
+                if (dataEsc && dataEsc.includes('-')) {
+                    dataFormatada = dataEsc.split('-').reverse().join('/');
+                }
+
+                // Busca registro correspondente na aba Respostas (Realizadas)
+                const real = db.realizadas.find(r => r.data === dataEsc && r.oficina === oficinaEsc);
+                const instrutoresReal = real ? real.instrutores : "Pendente / Não registrada";
+                
+                // Compara para ver se os instrutores que foram ao local são os mesmos da escala
+                const isMatch = real && real.instrutores === instrutoresEsc;
 
                 tbody.innerHTML += `
                     <tr>
-                        <td>${dataEsc}</td>
-                        <td>${esc[3]}</td>
-                        <td>${esc[5]}</td>
+                        <td style="font-weight: 600;">${dataFormatada}</td>
+                        <td>${oficinaEsc}</td>
+                        <td>${instrutoresEsc}</td>
                         <td class="${real ? '' : 'mismatch'}">${instrutoresReal}</td>
-                        <td class="${isMatch ? 'match' : 'mismatch'}">${isMatch ? '✅ Ok' : '⚠️ Divergente'}</td>
+                        <td class="${isMatch ? 'match' : 'mismatch'}">${isMatch ? '✅ Tudo Certo' : '⚠️ Divergente'}</td>
                     </tr>`;
             });
         }
