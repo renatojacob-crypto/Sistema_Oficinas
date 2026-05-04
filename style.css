@@ -27,6 +27,10 @@ body {
     min-height: 100vh;
 }
 
+.fundo-novo {
+    background-image: url('imagens/fundo_principal.png'); /* Coloque o nome da sua imagem nova aqui */
+}
+
 /* Truque para deixar a imagem de fundo com 30% de opacidade sem afetar o formulário */
 body::before {
     content: "";
