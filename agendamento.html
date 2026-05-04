@@ -82,12 +82,10 @@
             <button type="submit" id="btnEnviar">Salvar Agendamento</button>
         </form>
     </div>
-    
-        // COLOQUE AQUI A MESMA URL DO SEU GOOGLE APPS SCRIPT
+
     <script src="config.js"></script>
 
     <script>
-        // O código da página continua aqui...
         let dadosGlobais = {};
 
         window.onload = () => {
@@ -100,12 +98,25 @@
                     popularSelect("regional", regionaisUnicas);
                     popularSelect("oficina", data.oficinas);
                     
+                    // --- CORREÇÃO DO AUTOCOMPLETAR AQUI ---
                     const datalist = document.getElementById("listaInstituicoes");
-                    if(data.instituicoes) {
-                        [...new Set(data.instituicoes)].forEach(inst => {
+                    datalist.innerHTML = ""; // Limpa a lista antes de popular
+                    
+                    // Tenta puxar a lista de instituições varrendo os agendamentos já existentes
+                    if (data.agendamentos && data.agendamentos.length > 0) {
+                        const escolasUnicas = [...new Set(data.agendamentos.map(ag => ag.instituicao))].filter(Boolean).sort();
+                        escolasUnicas.forEach(inst => {
+                            datalist.innerHTML += `<option value="${inst}">`;
+                        });
+                    } 
+                    // Caso o seu backend envie as instituições separadas
+                    else if (data.instituicoes && data.instituicoes.length > 0) {
+                        const escolasUnicas = [...new Set(data.instituicoes)].filter(Boolean).sort();
+                        escolasUnicas.forEach(inst => {
                             datalist.innerHTML += `<option value="${inst}">`;
                         });
                     }
+                    // ----------------------------------------
 
                     document.getElementById("status").style.display = "none";
                     document.getElementById("formAgendamento").style.display = "block";
@@ -132,7 +143,6 @@
             popularSelect("cidade", cidadesFiltradas);
         }
 
-        // LÓGICA DE CÁLCULO DA CARGA HORÁRIA
         function calcularCargaHoraria() {
             const inicio = document.getElementById("horaInicio").value;
             const fim = document.getElementById("horaFim").value;
@@ -151,7 +161,6 @@
                 const horas = Math.floor(minutosTotais / 60);
                 const minutos = minutosTotais % 60;
                 
-                // Formata o texto final (ex: "2h 30m" ou "3h 00m")
                 const textoMinutos = minutos < 10 ? '0' + minutos : minutos;
                 document.getElementById("cargaHoraria").value = `${horas}h ${textoMinutos}m`;
             }
@@ -161,7 +170,6 @@
             e.preventDefault();
             const btn = document.getElementById("btnEnviar");
 
-            // Bloqueia envio se a carga horária for inválida
             if(document.getElementById("cargaHoraria").value === "Horário final menor que inicial") {
                 alert("Por favor, corrija os horários informados.");
                 return;
@@ -184,16 +192,13 @@
                 telefone: document.getElementById("telefone").value
             };
 
-            // Novo bloco de envio ajustado para ignorar o bloqueio CORS do Google
             fetch(URL_GAS, {
                 method: "POST",
-                mode: "no-cors", // <--- Esta é a linha mágica que resolve o problema
+                mode: "no-cors",
                 headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify(payload)
             })
             .then(() => {
-                // Como o no-cors não nos deixa ler o JSON de volta, 
-                // se a requisição terminou, sabemos que o Google salvou.
                 alert("Oficina agendada com sucesso!");
                 location.reload(); 
             })
