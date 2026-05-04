@@ -1,0 +1,70 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Conferência Escala vs Realizado</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .match { color: green; font-weight: bold; }
+        .mismatch { color: red; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <div class="container" style="max-width: 1000px;">
+        <a href="index.html">← Voltar</a>
+        <h1>Relatório Comparativo</h1>
+        
+        <div class="card-white" style="display:flex; gap:10px; margin-bottom:20px; align-items: flex-end;">
+            <div><label>Início:</label><input type="date" id="fInicio"></div>
+            <div><label>Fim:</label><input type="date" id="fFim"></div>
+            <button onclick="gerarRelatorio()" style="width:auto;">Filtrar</button>
+        </div>
+
+        <table id="tabelaComparativa">
+            <thead>
+                <tr>
+                    <th>Data</th>
+                    <th>Oficina</th>
+                    <th>Escalados</th>
+                    <th>Realizaram</th>
+                    <th>Status</th>
+                </tr>
+            </thead>
+            <tbody></tbody>
+        </table>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        let db = {};
+        window.onload = () => { fetch(URL_GAS).then(res => res.json()).then(data => db = data); };
+
+        function gerarRelatorio() {
+            const inicio = document.getElementById("fInicio").value;
+            const fim = document.getElementById("fFim").value;
+            const tbody = document.querySelector("#tabelaComparativa tbody");
+            tbody.innerHTML = "";
+
+            // Cruzamento de dados: Para cada Escala, busca a Resposta correspondente
+            db.escala.forEach(esc => {
+                const dataEsc = esc[1]; // Ajustar índice conforme sua planilha Escala
+                if ((inicio && dataEsc < inicio) || (fim && dataEsc > fim)) return;
+
+                // Busca registro na aba Respostas (Realizadas)
+                const real = db.realizadas.find(r => r.data === dataEsc && r.oficina === esc[3]);
+                const instrutoresReal = real ? real.instrutores : "Não realizada";
+                const isMatch = real && real.instrutores === esc[5];
+
+                tbody.innerHTML += `
+                    <tr>
+                        <td>${dataEsc}</td>
+                        <td>${esc[3]}</td>
+                        <td>${esc[5]}</td>
+                        <td class="${real ? '' : 'mismatch'}">${instrutoresReal}</td>
+                        <td class="${isMatch ? 'match' : 'mismatch'}">${isMatch ? '✅ Ok' : '⚠️ Divergente'}</td>
+                    </tr>`;
+            });
+        }
+    </script>
+</body>
+</html>

@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Definição de Escala</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <a href="index.html">← Voltar</a>
+        <header class="form-header">
+            <h1>Escala de Instrutores</h1>
+        </header>
+
+        <form id="formEscala">
+            <label>1. Selecione a Oficina Agendada:</label>
+            <select id="agendamentoSelect" onchange="carregarDadosAgendamento()" required>
+                <option value="">Carregando...</option>
+            </select>
+
+            <div id="corpoEscala" style="display:none; margin-top:20px;">
+                <p><strong>Oficina:</strong> <span id="infoOficina"></span></p>
+                <label>2. Selecione os Instrutores para a Escala:</label>
+                <div id="instrutoresContainer" class="checkbox-group"></div>
+                <button type="submit" id="btnSalvar">Salvar Escala</button>
+            </div>
+        </form>
+    </div>
+
+    <script src="config.js"></script>
+    <script>
+        let dadosGlobais = {};
+
+        window.onload = () => {
+            fetch(URL_GAS).then(res => res.json()).then(data => {
+                dadosGlobais = data;
+                const select = document.getElementById("agendamentoSelect");
+                select.innerHTML = '<option value="">Selecione...</option>';
+                data.agendamentos.forEach(ag => {
+                    select.innerHTML += `<option value="${ag.linha}">${ag.textoDisplay}</option>`;
+                });
+            });
+        };
+
+        function carregarDadosAgendamento() {
+            const linha = document.getElementById("agendamentoSelect").value;
+            if (!linha) return;
+            const ag = dadosGlobais.agendamentos.find(a => a.linha == linha);
+            document.getElementById("infoOficina").innerText = ag.oficina;
+            
+            // Carregar instrutores da regional
+            const container = document.getElementById("instrutoresContainer");
+            container.innerHTML = "";
+            dadosGlobais.instrutoresData.filter(i => i[3] === ag.regional || ag.regional.includes(i[3].replace("Gov.", "Governador")))
+                .forEach(i => {
+                    container.innerHTML += `<label class="checkbox-label"><input type="checkbox" name="inst" value="${i[1]}"> ${i[1]}</label>`;
+                });
+            document.getElementById("corpoEscala").style.display = "block";
+        }
+
+        document.getElementById("formEscala").onsubmit = (e) => {
+            e.preventDefault();
+            const btn = document.getElementById("btnSalvar");
+            const selecionados = Array.from(document.querySelectorAll('input[name="inst"]:checked')).map(c => c.value).join(", ");
+            const ag = dadosGlobais.agendamentos.find(a => a.linha == document.getElementById("agendamentoSelect").value);
+
+            btn.disabled = true;
+            fetch(URL_GAS, {
+                method: "POST",
+                mode: "no-cors",
+                body: JSON.stringify({
+                    tipoEnvio: "SALVAR_ESCALA",
+                    linhaAgendamento: ag.linha,
+                    dataOficina: ag.dataOficina,
+                    regional: ag.regional,
+                    oficina: ag.oficina,
+                    instituicao: ag.instituicao,
+                    instrutoresEscalados: selecionados
+                })
+            }).then(() => {
+                alert("Escala salva!");
+                location.reload();
+            });
+        };
+    </script>
+</body>
+</html>
