@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portal de Formadores</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .menu-grid { display: grid; grid-template-columns: 1fr; gap: 15px; margin-top: 20px; }
+        .card-menu {
+            background: #f3f4f6; padding: 20px; border-radius: 8px; 
+            text-align: center; text-decoration: none; color: #1f2937;
+            font-weight: bold; border: 2px solid transparent; transition: 0.3s;
+        }
+        .card-menu:hover { border-color: var(--primary-color); background: #e5e7eb; }
+        .logout { text-align: center; margin-top: 30px; display: block; color: #dc2626; text-decoration: none; font-weight: bold; cursor: pointer; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header class="form-header">
+            <img src="imagens/logopreto.png" alt="Logomarca" class="logo-empresa">
+            <h1>Portal Interno</h1>
+            <p>Selecione o módulo desejado abaixo:</p>
+        </header>
+
+        <div class="menu-grid">
+            <a href="siscontrol.html" class="card-menu">
+                🤖 Sistema de Controle de Oficinas
+            </a>
+            <!-- Você pode adicionar mais cards aqui no futuro -->
+            <a href="#" class="card-menu" style="opacity: 0.5; cursor: not-allowed;">
+                📦 Pedidos de Peças (Em breve)
+            </a>
+        </div>
+
+        <a onclick="sair()" class="logout">🚪 Sair do Sistema</a>
+    </div>
+
+    <script>
+        // Verifica se está logado para ver o portal
+        if (sessionStorage.getItem("logado") !== "sim") {
+            window.location.href = "index.html";
+        }
+
+        // Função de logoff
+        function sair() {
+            sessionStorage.removeItem("logado");
+            window.location.href = "index.html";
+        }
+    </script>
+</body>
+</html>
