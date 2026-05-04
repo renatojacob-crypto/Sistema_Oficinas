@@ -63,14 +63,32 @@
                     <p style="font-size: 13px; color: #6b7280; margin: 0;">Compartilhe a escala dos próximos 15 dias</p>
                 </div>
             </a>
+        </div>
 
+        <!-- NOVO: Botão de Sair do Sistema -->
+        <div style="text-align: center; margin-top: 40px;">
+            <a href="#" onclick="sair()" style="color: #dc2626; text-decoration: none; font-weight: bold; font-size: 16px; padding: 10px 20px; border: 1px solid #dc2626; border-radius: 8px; transition: 0.3s;">🚪 Sair do Sistema</a>
         </div>
 
         <footer style="margin-top: 40px; font-size: 12px; color: #9ca3af;">
-            Sistema de Monitoramento de Projetos Educacionais YXZ Soluções Educacionais
+            Sistema de Monitoramento de Projetos Educacionais YXZ Soluções Educacionais<br>
             Desenvolvido por Renato Jacob
         </footer>
     </div>
 
+    <!-- NOVO: Script de Segurança -->
+    <script>
+        // 1. Verifica se o usuário tem a chave "logado" salva no navegador
+        if (sessionStorage.getItem("logado") !== "sim") {
+            // Se não tiver, chuta de volta para a tela de login
+            window.location.href = "index.html"; 
+        }
+
+        // 2. Função acionada ao clicar no botão "Sair"
+        function sair() {
+            sessionStorage.removeItem("logado"); // Destrói o crachá
+            window.location.href = "index.html"; // Volta pro login
+        }
+    </script>
 </body>
 </html>

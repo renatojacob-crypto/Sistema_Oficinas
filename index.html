@@ -16,19 +16,38 @@
         <form id="formLogin">
             <div class="form-group">
                 <label for="usuario">Usuário:</label>
-                <input type="text" id="usuario" required>
+                <input type="text" id="usuario" style="width: 100%; box-sizing: border-box;" required>
             </div>
             
             <div class="form-group">
                 <label for="senha">Senha:</label>
-                <input type="password" id="senha" required>
+                <div style="position: relative; display: flex; align-items: center;">
+                    <input type="password" id="senha" style="width: 100%; box-sizing: border-box; padding-right: 40px;" required>
+                    <span id="btnOlho" onclick="mostrarSenha()" style="position: absolute; right: 10px; cursor: pointer; font-size: 18px; user-select: none;">👁️</span>
+                </div>
             </div>
 
             <p id="msgErro" style="color: #dc2626; text-align: center; display: none; font-weight: bold;">Usuário ou senha incorretos.</p>
             <p id="msgCarregando" style="color: #2563eb; text-align: center; display: none;">Validando credenciais...</p>
 
-            <button type="submit" id="btnEntrar">Entrar</button>
+            <button type="submit" id="btnEntrar" style="width: 100%; margin-top: 15px;">ENTRAR</button>
         </form>
+
+        <script>
+            // Nova função para mostrar/ocultar a senha
+            function mostrarSenha() {
+                const inputSenha = document.getElementById("senha");
+                const btnOlho = document.getElementById("btnOlho");
+                
+                if (inputSenha.type === "password") {
+                    inputSenha.type = "text";
+                    btnOlho.innerText = "🙈"; // Troca pro macaquinho ou olho fechado
+                } else {
+                    inputSenha.type = "password";
+                    btnOlho.innerText = "👁️";
+                }
+            }
+        </script>
     </div>
 
     <script src="config.js"></script>
