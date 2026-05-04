@@ -4,25 +4,37 @@
     <meta charset="UTF-8">
     <title>Definição de Escala</title>
     <link rel="stylesheet" href="style.css">
+    <style>
+        .card-branco { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 20px; }
+        .info-box { background: #f9fafb; padding: 15px; border-radius: 8px; margin-bottom: 20px; border: 1px solid #eee; }
+        .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-top: 10px; }
+        .checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+    </style>
 </head>
 <body>
-    <div class="container">
-        <a href="index.html">← Voltar</a>
-        <header class="form-header">
-            <h1>Escala de Instrutores</h1>
+    <div class="container" style="max-width: 800px;">
+        <a href="index.html" style="text-decoration: none; color: var(--primary-color); font-weight: 700;">← Voltar ao Início</a>
+        
+        <header class="form-header" style="margin-top: 15px;">
+            <h1 style="color: var(--primary-color); margin: 0;">👥 Escala de Instrutores</h1>
         </header>
 
-        <form id="formEscala">
-            <label>1. Selecione a Oficina Agendada:</label>
-            <select id="agendamentoSelect" onchange="carregarDadosAgendamento()" required>
-                <option value="">Carregando...</option>
+        <form id="formEscala" class="card-branco">
+            <label style="font-weight: 600;">1. Selecione a Oficina Agendada:</label>
+            <select id="agendamentoSelect" onchange="carregarDadosAgendamento()" required style="width: 100%; padding: 10px; margin-top: 8px;">
+                <option value="">Carregando aguarde...</option>
             </select>
 
-            <div id="corpoEscala" style="display:none; margin-top:20px;">
-                <p><strong>Oficina:</strong> <span id="infoOficina"></span></p>
-                <label>2. Selecione os Instrutores para a Escala:</label>
-                <div id="instrutoresContainer" class="checkbox-group"></div>
-                <button type="submit" id="btnSalvar">Salvar Escala</button>
+            <div id="corpoEscala" style="display:none; margin-top:25px;">
+                <div class="info-box">
+                    <p style="margin: 0 0 8px 0;"><strong>Oficina:</strong> <span id="infoOficina"></span></p>
+                    <p style="margin: 0;"><strong>Instituição:</strong> <span id="infoInstituicao"></span></p>
+                </div>
+
+                <label style="font-weight: 600;">2. Selecione os Instrutores para a Escala:</label>
+                <div id="instrutoresContainer" class="checkbox-grid"></div>
+                
+                <button type="submit" id="btnSalvar" style="margin-top: 30px; width: 100%;">Salvar Escala</button>
             </div>
         </form>
     </div>
@@ -32,39 +44,83 @@
         let dadosGlobais = {};
 
         window.onload = () => {
-            fetch(URL_GAS).then(res => res.json()).then(data => {
-                dadosGlobais = data;
-                const select = document.getElementById("agendamentoSelect");
-                select.innerHTML = '<option value="">Selecione...</option>';
-                data.agendamentos.forEach(ag => {
-                    select.innerHTML += `<option value="${ag.linha}">${ag.textoDisplay}</option>`;
+            fetch(URL_GAS)
+                .then(res => res.json())
+                .then(data => {
+                    dadosGlobais = data;
+                    const select = document.getElementById("agendamentoSelect");
+                    select.innerHTML = '<option value="">Selecione a oficina...</option>';
+                    
+                    // 1. LÓGICA DE BLOQUEIO: Mapeia os IDs (linhas) das oficinas que já estão na aba Escala
+                    const escalasExistentes = data.escala ? data.escala.map(e => String(e.linhaAg)) : [];
+
+                    // 2. Filtra os agendamentos: Mantém APENAS os que NÃO estão na lista de escalas existentes
+                    const agendamentosSemEscala = data.agendamentos.filter(ag => !escalasExistentes.includes(String(ag.linha)));
+
+                    // 3. Atualiza o Select
+                    if (agendamentosSemEscala.length === 0) {
+                        select.innerHTML = '<option value="">Nenhuma oficina aguardando escala</option>';
+                        select.disabled = true;
+                    } else {
+                        agendamentosSemEscala.forEach(ag => {
+                            select.innerHTML += `<option value="${ag.linha}">${ag.textoDisplay}</option>`;
+                        });
+                    }
+                })
+                .catch(err => {
+                    document.getElementById("agendamentoSelect").innerHTML = '<option value="">Erro ao carregar dados</option>';
+                    console.error("Erro na leitura do banco:", err);
                 });
-            });
         };
 
         function carregarDadosAgendamento() {
             const linha = document.getElementById("agendamentoSelect").value;
-            if (!linha) return;
-            const ag = dadosGlobais.agendamentos.find(a => a.linha == linha);
-            document.getElementById("infoOficina").innerText = ag.oficina;
+            if (!linha) {
+                document.getElementById("corpoEscala").style.display = "none";
+                return;
+            }
             
-            // Carregar instrutores da regional
+            // Puxa os dados da oficina selecionada
+            const ag = dadosGlobais.agendamentos.find(a => String(a.linha) === String(linha));
+            document.getElementById("infoOficina").innerText = ag.oficina;
+            document.getElementById("infoInstituicao").innerText = ag.instituicao;
+            
+            // Carrega os instrutores filtrando pela Regional correspondente
             const container = document.getElementById("instrutoresContainer");
             container.innerHTML = "";
-            dadosGlobais.instrutoresData.filter(i => i[3] === ag.regional || ag.regional.includes(i[3].replace("Gov.", "Governador")))
-                .forEach(i => {
+            
+            const instrutoresDaRegional = dadosGlobais.instrutoresData.filter(i => 
+                i[3] === ag.regional || ag.regional.includes(i[3].replace("Gov.", "Governador"))
+            );
+
+            if (instrutoresDaRegional.length === 0) {
+                container.innerHTML = "<p style='color: #ef4444; grid-column: 1/-1;'>Nenhum instrutor cadastrado para a regional desta oficina.</p>";
+            } else {
+                instrutoresDaRegional.forEach(i => {
                     container.innerHTML += `<label class="checkbox-label"><input type="checkbox" name="inst" value="${i[1]}"> ${i[1]}</label>`;
                 });
+            }
+            
             document.getElementById("corpoEscala").style.display = "block";
         }
 
         document.getElementById("formEscala").onsubmit = (e) => {
             e.preventDefault();
-            const btn = document.getElementById("btnSalvar");
+            
             const selecionados = Array.from(document.querySelectorAll('input[name="inst"]:checked')).map(c => c.value).join(", ");
-            const ag = dadosGlobais.agendamentos.find(a => a.linha == document.getElementById("agendamentoSelect").value);
+            
+            // Validação de segurança para não salvar escala vazia
+            if (!selecionados) {
+                alert("Atenção: Por favor, selecione pelo menos um instrutor para salvar a escala.");
+                return;
+            }
 
+            const btn = document.getElementById("btnSalvar");
             btn.disabled = true;
+            btn.innerText = "Salvando...";
+
+            const ag = dadosGlobais.agendamentos.find(a => String(a.linha) === String(document.getElementById("agendamentoSelect").value));
+
             fetch(URL_GAS, {
                 method: "POST",
                 mode: "no-cors",
@@ -78,8 +134,12 @@
                     instrutoresEscalados: selecionados
                 })
             }).then(() => {
-                alert("Escala salva! Obrigado.");
-                location.reload();
+                alert("Escala salva com sucesso!");
+                location.reload(); // Recarrega a página para limpar o formulário
+            }).catch(err => {
+                alert("Erro ao salvar. Verifique sua conexão.");
+                btn.disabled = false;
+                btn.innerText = "Salvar Escala";
             });
         };
     </script>
