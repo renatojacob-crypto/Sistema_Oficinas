@@ -9,7 +9,6 @@
         .readonly-field { background-color: #f3f4f6 !important; color: #4b5563 !important; font-weight: 600; border: 1px solid #d1d5db !important; }
         .hidden { display: none; }
         
-        /* GRID DE CARTÕES (IGUAL À ESCALA) */
         .agendamentos-grid { 
             display: grid; 
             grid-template-columns: 1fr; 
@@ -20,8 +19,9 @@
             padding-right: 5px;
         }
         
+        /* NOVO: A cor de fundo definida via variável */
         .agendamento-card {
-            background: #ffffff;
+            background-color: var(--cor-fundo, #ffffff);
             border: 2px solid #e5e7eb;
             border-radius: 10px;
             padding: 15px;
@@ -35,14 +35,14 @@
         }
 
         .agendamento-card:hover {
-            border-color: #a7f3d0;
-            background: #f0fdf4;
+            filter: brightness(0.96);
+            border-color: #9ca3af;
         }
 
         .agendamento-card.selecionado {
-            border-color: var(--primary-color);
-            background: #dcfce7;
-            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+            border-color: var(--primary-color) !important;
+            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2) !important;
+            filter: brightness(0.92);
         }
 
         .info-titulo { color: var(--primary-color); font-weight: bold; font-size: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 5px; }
@@ -150,6 +150,18 @@
         let fotosBase64 = [];
         let linhaAgendamentoAtual = null;
 
+        // NOVO: Função de coloração das Regionais
+        function obterCorRegional(regional) {
+            if (!regional) return "#ffffff";
+            const reg = regional.toLowerCase();
+            
+            if (reg.includes("itabira")) return "#dcfce7"; 
+            if (reg.includes("governador") || reg.includes("valadares") || reg.includes("gov.")) return "#dbeafe"; 
+            if (reg.includes("vitória") || reg.includes("vitoria")) return "#fef9c3"; 
+            
+            return "#ffffff"; 
+        }
+
         window.onload = () => {
             fetch(URL_GAS)
                 .then(res => res.json())
@@ -164,6 +176,10 @@
                             const horario = ag.horaInicio ? ag.horaInicio : "--:--";
                             const card = document.createElement("div");
                             card.className = "agendamento-card";
+                            
+                            // INJETA A COR NO CARTÃO AQUI
+                            card.style.setProperty('--cor-fundo', obterCorRegional(ag.regional));
+                            
                             card.onclick = () => preencherDadosAgendamento(ag.linha, card);
                             
                             card.innerHTML = `
@@ -200,14 +216,12 @@
         function preencherDadosAgendamento(linha, elemento) {
             linhaAgendamentoAtual = linha;
             
-            // Highlight do card
             document.querySelectorAll(".agendamento-card").forEach(c => c.classList.remove("selecionado"));
             elemento.classList.add("selecionado");
 
             const ag = dadosGlobais.agendamentos.find(a => a.linha == linha);
             const horario = ag.horaInicio ? ag.horaInicio : "--:--";
 
-            // Preenche resumo visual e campos ocultos
             document.getElementById("resumoOficina").value = `${ag.dataOficina} às ${horario} | ${ag.oficina} - ${ag.instituicao}`;
             document.getElementById("dataOficina").value = ag.dataOficina;
             document.getElementById("local").value = ag.regional;
@@ -219,11 +233,9 @@
 
             document.getElementById("formOficina").classList.remove("hidden");
             
-            // Reseta formulário ao trocar de card
             document.querySelectorAll('input[name="statusOficina"]').forEach(r => r.checked = false);
             alternarStatus();
 
-            // Scroll suave para o formulário
             document.getElementById("formOficina").scrollIntoView({ behavior: 'smooth' });
         }
 

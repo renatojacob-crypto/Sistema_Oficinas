@@ -7,19 +7,19 @@
     <style>
         .card-branco { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 20px; }
         
-        /* NOVO VISUAL DOS CARTÕES DE AGENDAMENTO */
         .agendamentos-grid { 
             display: grid; 
             grid-template-columns: 1fr; 
             gap: 12px; 
             margin-top: 15px; 
-            max-height: 400px; /* Cria uma barra de rolagem se tiver muitos */
+            max-height: 400px; 
             overflow-y: auto;
             padding-right: 5px;
         }
         
+        /* NOVO: A cor de fundo agora é definida pela regional */
         .agendamento-card {
-            background: #f9fafb;
+            background-color: var(--cor-fundo, #ffffff);
             border: 2px solid #e5e7eb;
             border-radius: 8px;
             padding: 15px;
@@ -31,16 +31,17 @@
             gap: 5px;
         }
 
+        /* Efeito ao passar o mouse: escurece um pouquinho a cor original */
         .agendamento-card:hover {
-            border-color: #a7f3d0;
-            background: #f0fdf4;
+            filter: brightness(0.96);
+            border-color: #9ca3af;
         }
 
-        /* Classe que será adicionada via JavaScript quando clicado */
+        /* Efeito ao clicar: borda marcante e escurece mais um pouco */
         .agendamento-card.selecionado {
-            border-color: var(--primary-color);
-            background: #dcfce7;
-            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2);
+            border-color: var(--primary-color) !important;
+            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2) !important;
+            filter: brightness(0.92);
         }
 
         .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-top: 10px; }
@@ -83,7 +84,19 @@
     <script src="config.js"></script>
     <script>
         let dadosGlobais = {};
-        let agendamentoSelecionadoId = null; // Variável para guardar qual cartão foi clicado
+        let agendamentoSelecionadoId = null;
+
+        // NOVO: Função que descobre a cor baseada no nome da Regional
+        function obterCorRegional(regional) {
+            if (!regional) return "#ffffff";
+            const reg = regional.toLowerCase();
+            
+            if (reg.includes("itabira")) return "#dcfce7"; // Verde Claro
+            if (reg.includes("governador") || reg.includes("valadares") || reg.includes("gov.")) return "#dbeafe"; // Azul Claro
+            if (reg.includes("vitória") || reg.includes("vitoria")) return "#fef9c3"; // Amarelo Claro
+            
+            return "#ffffff"; // Branco para regionais que não tem cor definida
+        }
 
         window.onload = () => {
             fetch(URL_GAS)
@@ -91,28 +104,25 @@
                 .then(data => {
                     dadosGlobais = data;
                     const containerAgendamentos = document.getElementById("listaAgendamentos");
-                    containerAgendamentos.innerHTML = ""; // Limpa a mensagem de carregando
+                    containerAgendamentos.innerHTML = ""; 
                     
-                    // LÓGICA DE BLOQUEIO: Lista de escalas que já existem
                     const escalasExistentes = data.escala ? data.escala.map(e => String(e.linhaAg)) : [];
-
-                    // Mantém APENAS os agendamentos que NÃO estão na lista de escalas (suprimindo os já preenchidos)
                     const agendamentosSemEscala = data.agendamentos.filter(ag => !escalasExistentes.includes(String(ag.linha)));
 
                     if (agendamentosSemEscala.length === 0) {
                         containerAgendamentos.innerHTML = '<p style="color: var(--primary-color); font-weight: bold; text-align: center; padding: 30px; background: #f0fdf4; border-radius: 8px;">🎉 Todas as oficinas já possuem instrutores escalados!</p>';
                     } else {
-                        // GERA UM CARTÃO DIV PARA CADA OFICINA PENDENTE
                         agendamentosSemEscala.forEach(ag => {
                             const horario = ag.horaInicio ? ag.horaInicio : "--:--";
                             
-                            // Criação dinâmica do elemento Div
                             const card = document.createElement("div");
                             card.className = "agendamento-card";
-                            // Configura o evento de clique do cartão
+                            
+                            // INJETA A COR NO CARTÃO AQUI
+                            card.style.setProperty('--cor-fundo', obterCorRegional(ag.regional));
+                            
                             card.onclick = () => selecionarAgendamento(ag.linha, card);
                             
-                            // Conteúdo interno do cartão
                             card.innerHTML = `
                                 <div class="info-titulo">📅 ${ag.dataOficina} às ${horario} - ${ag.oficina}</div>
                                 <div style="font-size: 14px; color: #1f2937;"><strong>Instituição:</strong> ${ag.instituicao}</div>
@@ -125,22 +135,15 @@
                 })
                 .catch(err => {
                     document.getElementById("listaAgendamentos").innerHTML = '<p style="color: red;">Erro ao carregar dados do servidor.</p>';
-                    console.error("Erro na leitura do banco:", err);
                 });
         };
 
-        // Função que roda quando clica em um cartão
         function selecionarAgendamento(linha, elementoClicado) {
-            agendamentoSelecionadoId = linha; // Salva a linha escolhida
-            
-            // 1. Remove a classe "selecionado" de TODOS os cartões para limpar seleções anteriores
+            agendamentoSelecionadoId = linha; 
             const todosCartoes = document.querySelectorAll(".agendamento-card");
             todosCartoes.forEach(card => card.classList.remove("selecionado"));
             
-            // 2. Adiciona a classe "selecionado" (borda verde) SÓ no que foi clicado agora
             elementoClicado.classList.add("selecionado");
-            
-            // 3. Carrega a lista de instrutores
             carregarInstrutores(linha);
         }
 
@@ -149,7 +152,6 @@
             const container = document.getElementById("instrutoresContainer");
             container.innerHTML = "";
             
-            // Filtra instrutores pela regional (inclui lógica "Gov." e "Governador")
             const instrutoresDaRegional = dadosGlobais.instrutoresData.filter(i => 
                 i[3] === ag.regional || ag.regional.includes(i[3].replace("Gov.", "Governador"))
             );
@@ -166,10 +168,7 @@
                 });
             }
             
-            // Mostra o bloco de instrutores
             document.getElementById("corpoEscala").style.display = "block";
-            
-            // Faz a tela rolar suavemente para baixo para o usuário ver os instrutores
             document.getElementById("corpoEscala").scrollIntoView({ behavior: 'smooth' });
         }
 
