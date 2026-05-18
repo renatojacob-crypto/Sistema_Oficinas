@@ -39,6 +39,12 @@
         </form>
     </div>
 
+    <script>
+        if (sessionStorage.getItem("logado") !== "sim") {
+            window.location.href = "index.html"; 
+        }
+    </script>
+
     <script src="config.js"></script>
     <script>
         let dadosGlobais = {};
@@ -51,19 +57,19 @@
                     const select = document.getElementById("agendamentoSelect");
                     select.innerHTML = '<option value="">Selecione a oficina...</option>';
                     
-                    // 1. LÓGICA DE BLOQUEIO: Mapeia os IDs (linhas) das oficinas que já estão na aba Escala
                     const escalasExistentes = data.escala ? data.escala.map(e => String(e.linhaAg)) : [];
-
-                    // 2. Filtra os agendamentos: Mantém APENAS os que NÃO estão na lista de escalas existentes
                     const agendamentosSemEscala = data.agendamentos.filter(ag => !escalasExistentes.includes(String(ag.linha)));
 
-                    // 3. Atualiza o Select
                     if (agendamentosSemEscala.length === 0) {
                         select.innerHTML = '<option value="">Nenhuma oficina aguardando escala</option>';
                         select.disabled = true;
                     } else {
                         agendamentosSemEscala.forEach(ag => {
-                            select.innerHTML += `<option value="${ag.linha}">${ag.textoDisplay}</option>`;
+                            // --- NOVO: Puxando o horário para a visualização ---
+                            const horario = ag.horaInicio ? ag.horaInicio : "--:--";
+                            const textoDetalhado = `${ag.textoDisplay} às ${horario} | ${ag.instituicao} (${ag.cidade})`;
+                            
+                            select.innerHTML += `<option value="${ag.linha}">${textoDetalhado}</option>`;
                         });
                     }
                 })
@@ -80,12 +86,13 @@
                 return;
             }
             
-            // Puxa os dados da oficina selecionada
             const ag = dadosGlobais.agendamentos.find(a => String(a.linha) === String(linha));
-            document.getElementById("infoOficina").innerText = ag.oficina;
+            
+            // Adicionei o horário também nas informações de resumo que aparecem embaixo
+            const horario = ag.horaInicio ? ag.horaInicio : "--:--";
+            document.getElementById("infoOficina").innerText = `${ag.oficina} (Início: ${horario})`;
             document.getElementById("infoInstituicao").innerText = ag.instituicao;
             
-            // Carrega os instrutores filtrando pela Regional correspondente
             const container = document.getElementById("instrutoresContainer");
             container.innerHTML = "";
             
@@ -109,7 +116,6 @@
             
             const selecionados = Array.from(document.querySelectorAll('input[name="inst"]:checked')).map(c => c.value).join(", ");
             
-            // Validação de segurança para não salvar escala vazia
             if (!selecionados) {
                 alert("Atenção: Por favor, selecione pelo menos um instrutor para salvar a escala.");
                 return;
@@ -135,7 +141,7 @@
                 })
             }).then(() => {
                 alert("Escala salva com sucesso!");
-                location.reload(); // Recarrega a página para limpar o formulário
+                location.reload(); 
             }).catch(err => {
                 alert("Erro ao salvar. Verifique sua conexão.");
                 btn.disabled = false;
