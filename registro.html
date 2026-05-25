@@ -19,7 +19,6 @@
             padding-right: 5px;
         }
         
-        /* NOVO: A cor de fundo definida via variável */
         .agendamento-card {
             background-color: var(--cor-fundo, #ffffff);
             border: 2px solid #e5e7eb;
@@ -54,6 +53,9 @@
         
         .checkbox-group { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-top: 10px; }
         .checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; background: #fff; padding: 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 14px;}
+        
+        /* Estilo do filtro */
+        .filtro-container { background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; margin-top: 15px; margin-bottom: 5px; }
     </style>
 </head>
 <body>
@@ -69,6 +71,14 @@
 
         <div id="areaSelecao">
             <label style="font-weight: 700; font-size: 18px; color: var(--primary-color);">1. Selecione a Oficina para Registrar:</label>
+            
+            <div id="filtroBox" class="filtro-container hidden">
+                <label for="filtroRegional" style="font-size: 14px; font-weight: 600; color: #4b5563;">Filtrar lista por Regional:</label>
+                <select id="filtroRegional" onchange="filtrarCards()" style="width: 100%; padding: 10px; margin-top: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                    <option value="Todas">Todas as Regionais</option>
+                </select>
+            </div>
+
             <div id="listaAgendamentos" class="agendamentos-grid"></div>
         </div>
 
@@ -147,18 +157,16 @@
 
     <script>
         let dadosGlobais = {};
+        let agendamentosGlobais = []; // Guarda a lista completa original
         let fotosBase64 = [];
         let linhaAgendamentoAtual = null;
 
-        // NOVO: Função de coloração das Regionais
         function obterCorRegional(regional) {
             if (!regional) return "#ffffff";
             const reg = regional.toLowerCase();
-            
             if (reg.includes("itabira")) return "#dcfce7"; 
             if (reg.includes("governador") || reg.includes("valadares") || reg.includes("gov.")) return "#dbeafe"; 
             if (reg.includes("vitória") || reg.includes("vitoria")) return "#fef9c3"; 
-            
             return "#ffffff"; 
         }
 
@@ -167,28 +175,14 @@
                 .then(res => res.json())
                 .then(data => {
                     dadosGlobais = data;
+                    agendamentosGlobais = data.agendamentos || [];
                     
                     const containerAgendamentos = document.getElementById("listaAgendamentos");
                     containerAgendamentos.innerHTML = "";
                     
-                    if (data.agendamentos && data.agendamentos.length > 0) {
-                        data.agendamentos.forEach(ag => {
-                            const horario = ag.horaInicio ? ag.horaInicio : "--:--";
-                            const card = document.createElement("div");
-                            card.className = "agendamento-card";
-                            
-                            // INJETA A COR NO CARTÃO AQUI
-                            card.style.setProperty('--cor-fundo', obterCorRegional(ag.regional));
-                            
-                            card.onclick = () => preencherDadosAgendamento(ag.linha, card);
-                            
-                            card.innerHTML = `
-                                <div class="info-titulo">📅 ${ag.dataOficina} às ${horario} - ${ag.oficina}</div>
-                                <div style="font-size: 14px; color: #1f2937;"><strong>Instituição:</strong> ${ag.instituicao}</div>
-                                <div style="font-size: 13px; color: #4b5563;"><strong>Cidade:</strong> ${ag.cidade} | <strong>Regional:</strong> ${ag.regional}</div>
-                            `;
-                            containerAgendamentos.appendChild(card);
-                        });
+                    if (agendamentosGlobais.length > 0) {
+                        popularFiltroRegionais();
+                        renderizarCards("Todas"); // Renderiza todos inicialmente
                     } else {
                         containerAgendamentos.innerHTML = `<p style="text-align:center; padding:20px; color:green; font-weight:bold;">🎉 Não há oficinas pendentes de registro!</p>`;
                     }
@@ -205,6 +199,59 @@
                 });
         };
 
+        // NOVO: Função para popular o Dropdown com as regionais únicas
+        function popularFiltroRegionais() {
+            const regionaisUnicas = [...new Set(agendamentosGlobais.map(ag => ag.regional))].filter(Boolean).sort();
+            const select = document.getElementById("filtroRegional");
+            
+            regionaisUnicas.forEach(reg => {
+                select.innerHTML += `<option value="${reg}">${reg}</option>`;
+            });
+            
+            document.getElementById("filtroBox").classList.remove("hidden");
+        }
+
+        // NOVO: Função disparada ao alterar o dropdown
+        function filtrarCards() {
+            const regionalSelecionada = document.getElementById("filtroRegional").value;
+            renderizarCards(regionalSelecionada);
+        }
+
+        // NOVO: Função que constrói os cartões baseados no filtro
+        function renderizarCards(filtroRegional) {
+            const containerAgendamentos = document.getElementById("listaAgendamentos");
+            containerAgendamentos.innerHTML = "";
+            
+            // Oculta o formulário de baixo caso o usuário mude o filtro no meio de um preenchimento
+            document.getElementById("formOficina").classList.add("hidden");
+            linhaAgendamentoAtual = null;
+
+            const listaFiltrada = filtroRegional === "Todas" 
+                ? agendamentosGlobais 
+                : agendamentosGlobais.filter(ag => ag.regional === filtroRegional);
+
+            if (listaFiltrada.length === 0) {
+                containerAgendamentos.innerHTML = `<p style="color: #6b7280; text-align: center; padding: 15px;">Nenhuma oficina pendente para esta regional.</p>`;
+                return;
+            }
+
+            listaFiltrada.forEach(ag => {
+                const horario = ag.horaInicio ? ag.horaInicio : "--:--";
+                const card = document.createElement("div");
+                card.className = "agendamento-card";
+                
+                card.style.setProperty('--cor-fundo', obterCorRegional(ag.regional));
+                card.onclick = () => preencherDadosAgendamento(ag.linha, card);
+                
+                card.innerHTML = `
+                    <div class="info-titulo">📅 ${ag.dataOficina} às ${horario} - ${ag.oficina}</div>
+                    <div style="font-size: 14px; color: #1f2937;"><strong>Instituição:</strong> ${ag.instituicao}</div>
+                    <div style="font-size: 13px; color: #4b5563;"><strong>Cidade:</strong> ${ag.cidade} | <strong>Regional:</strong> ${ag.regional}</div>
+                `;
+                containerAgendamentos.appendChild(card);
+            });
+        }
+
         function popularSelect(id, array) {
             const select = document.getElementById(id);
             select.innerHTML = '<option value="">Selecione...</option>';
@@ -219,7 +266,7 @@
             document.querySelectorAll(".agendamento-card").forEach(c => c.classList.remove("selecionado"));
             elemento.classList.add("selecionado");
 
-            const ag = dadosGlobais.agendamentos.find(a => a.linha == linha);
+            const ag = agendamentosGlobais.find(a => a.linha == linha);
             const horario = ag.horaInicio ? ag.horaInicio : "--:--";
 
             document.getElementById("resumoOficina").value = `${ag.dataOficina} às ${horario} | ${ag.oficina} - ${ag.instituicao}`;
