@@ -7,7 +7,7 @@
     <link rel="stylesheet" href="style.css">
     <style>
         .readonly-field { background-color: #f3f4f6 !important; color: #4b5563 !important; font-weight: 600; border: 1px solid #d1d5db !important; }
-        .hidden { display: none; }
+        .hidden { display: none !important; }
         
         .agendamentos-grid { 
             display: grid; 
@@ -54,7 +54,6 @@
         .checkbox-group { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-top: 10px; }
         .checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; background: #fff; padding: 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 14px;}
         
-        /* Estilo do filtro */
         .filtro-container { background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; margin-top: 15px; margin-bottom: 5px; }
     </style>
 </head>
@@ -101,6 +100,14 @@
                     <div class="radio-group">
                         <label><input type="radio" name="statusOficina" value="Realizada" onchange="alternarStatus()" required> ✅ Realizada</label>
                         <label><input type="radio" name="statusOficina" value="Cancelada" onchange="alternarStatus()"> ❌ Cancelada</label>
+                    </div>
+                </div>
+
+                <div id="blocoSubStatus" class="status-box hidden" style="border-color: #fca5a5; background: #fef2f2;">
+                    <label style="font-size: 18px; font-weight: 700; color: #dc2626;">3. Esta oficina será Medida/Cobrada mesmo cancelada?</label>
+                    <div class="radio-group">
+                        <label><input type="radio" name="medirOficina" value="Sim" onchange="alternarSubStatus()"> 📏 Sim, Medir Oficina</label>
+                        <label><input type="radio" name="medirOficina" value="Nao" onchange="alternarSubStatus()"> 🚫 Não Medir</label>
                     </div>
                 </div>
             </div>
@@ -157,7 +164,7 @@
 
     <script>
         let dadosGlobais = {};
-        let agendamentosGlobais = []; // Guarda a lista completa original
+        let agendamentosGlobais = []; 
         let fotosBase64 = [];
         let linhaAgendamentoAtual = null;
 
@@ -182,7 +189,7 @@
                     
                     if (agendamentosGlobais.length > 0) {
                         popularFiltroRegionais();
-                        renderizarCards("Todas"); // Renderiza todos inicialmente
+                        renderizarCards("Todas"); 
                     } else {
                         containerAgendamentos.innerHTML = `<p style="text-align:center; padding:20px; color:green; font-weight:bold;">🎉 Não há oficinas pendentes de registro!</p>`;
                     }
@@ -199,7 +206,6 @@
                 });
         };
 
-        // NOVO: Função para popular o Dropdown com as regionais únicas
         function popularFiltroRegionais() {
             const regionaisUnicas = [...new Set(agendamentosGlobais.map(ag => ag.regional))].filter(Boolean).sort();
             const select = document.getElementById("filtroRegional");
@@ -211,18 +217,15 @@
             document.getElementById("filtroBox").classList.remove("hidden");
         }
 
-        // NOVO: Função disparada ao alterar o dropdown
         function filtrarCards() {
             const regionalSelecionada = document.getElementById("filtroRegional").value;
             renderizarCards(regionalSelecionada);
         }
 
-        // NOVO: Função que constrói os cartões baseados no filtro
         function renderizarCards(filtroRegional) {
             const containerAgendamentos = document.getElementById("listaAgendamentos");
             containerAgendamentos.innerHTML = "";
             
-            // Oculta o formulário de baixo caso o usuário mude o filtro no meio de um preenchimento
             document.getElementById("formOficina").classList.add("hidden");
             linhaAgendamentoAtual = null;
 
@@ -280,7 +283,9 @@
 
             document.getElementById("formOficina").classList.remove("hidden");
             
+            // Reseta as opções quando troca de card
             document.querySelectorAll('input[name="statusOficina"]').forEach(r => r.checked = false);
+            document.querySelectorAll('input[name="medirOficina"]').forEach(r => r.checked = false);
             alternarStatus();
 
             document.getElementById("formOficina").scrollIntoView({ behavior: 'smooth' });
@@ -305,26 +310,53 @@
             });
         }
 
+        // NOVO: Lógica de controle do primeiro nível (Realizada vs Cancelada)
         function alternarStatus() {
             const status = document.querySelector('input[name="statusOficina"]:checked')?.value;
+            const blocoSubStatus = document.getElementById("blocoSubStatus");
             const blocoRealizada = document.getElementById("blocoRealizada");
             const blocoCancelada = document.getElementById("blocoCancelada");
             const btnEnviar = document.getElementById("btnEnviar");
 
             if (status === "Realizada") {
+                blocoSubStatus.classList.add("hidden");
                 blocoRealizada.classList.remove("hidden");
                 blocoCancelada.classList.add("hidden");
                 btnEnviar.classList.remove("hidden");
                 btnEnviar.innerText = "Salvar Registro e Fotos";
+                
+                // Limpa a sub-pergunta
+                document.querySelectorAll('input[name="medirOficina"]').forEach(r => r.checked = false);
             } else if (status === "Cancelada") {
+                blocoSubStatus.classList.remove("hidden");
+                blocoRealizada.classList.add("hidden");
+                blocoCancelada.classList.add("hidden");
+                btnEnviar.classList.add("hidden"); // Esconde até responder a sub-pergunta
+            } else {
+                blocoSubStatus.classList.add("hidden");
+                blocoRealizada.classList.add("hidden");
+                blocoCancelada.classList.add("hidden");
+                btnEnviar.classList.add("hidden");
+            }
+        }
+
+        // NOVO: Lógica de controle do segundo nível (Medir vs Não Medir)
+        function alternarSubStatus() {
+            const medir = document.querySelector('input[name="medirOficina"]:checked')?.value;
+            const blocoRealizada = document.getElementById("blocoRealizada");
+            const blocoCancelada = document.getElementById("blocoCancelada");
+            const btnEnviar = document.getElementById("btnEnviar");
+
+            if (medir === "Sim") {
+                blocoRealizada.classList.remove("hidden");
+                blocoCancelada.classList.remove("hidden"); // Mantém a caixa de motivo ativa
+                btnEnviar.classList.remove("hidden");
+                btnEnviar.innerText = "Salvar Registro (Cancelada e Medida)";
+            } else if (medir === "Nao") {
                 blocoRealizada.classList.add("hidden");
                 blocoCancelada.classList.remove("hidden");
                 btnEnviar.classList.remove("hidden");
                 btnEnviar.innerText = "Registrar Cancelamento";
-            } else {
-                blocoRealizada.classList.add("hidden");
-                blocoCancelada.classList.add("hidden");
-                btnEnviar.classList.add("hidden");
             }
         }
 
@@ -344,10 +376,17 @@
         document.getElementById("formOficina").onsubmit = (e) => {
             e.preventDefault();
             const btn = document.getElementById("btnEnviar");
-            const status = document.querySelector('input[name="statusOficina"]:checked').value;
+            const statusPrincipal = document.querySelector('input[name="statusOficina"]:checked').value;
+            const medir = document.querySelector('input[name="medirOficina"]:checked')?.value;
+
+            // Define o Status final que irá para o Banco de Dados
+            let statusEnvio = statusPrincipal;
+            if (statusPrincipal === "Cancelada" && medir === "Sim") {
+                statusEnvio = "Cancelada (Medida)";
+            }
 
             let instrutoresSelecionados = "";
-            if (status === "Realizada") {
+            if (statusPrincipal === "Realizada" || statusEnvio === "Cancelada (Medida)") {
                 const checkboxes = document.querySelectorAll('input[name="instrutorCheck"]:checked');
                 if (checkboxes.length === 0) {
                     alert("Por favor, selecione os instrutores presentes.");
@@ -361,7 +400,7 @@
 
             const payload = {
                 linhaAgendamento: linhaAgendamentoAtual,
-                status: status,
+                status: statusEnvio,
                 motivoCancelamento: document.getElementById("motivoCancelamento").value,
                 dataDaOficina: document.getElementById("dataOficina").value,
                 local: document.getElementById("local").value,
