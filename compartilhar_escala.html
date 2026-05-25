@@ -39,7 +39,6 @@
             <p style="margin-top: 5px; color: #6b7280;">Próximos 15 dias de oficinas escaladas</p>
         </header>
 
-        <!-- NOVO: FILTRO DE REGIONAL -->
         <div class="card-branco" style="display:none; background: #f9fafb;" id="containerFiltro">
             <label style="font-weight: 600; font-size: 14px;">Selecione a Regional para o envio:</label>
             <select id="filtroRegional" onchange="atualizarRelatorio()" style="width: 100%; padding: 10px; margin-top: 8px; margin-bottom: 0;">
@@ -60,27 +59,33 @@
         </div>
     </div>
 
+    <script>
+        if (sessionStorage.getItem("logado") !== "sim") {
+            window.location.href = "index.html"; 
+        }
+    </script>
+
     <script src="config.js"></script>
     <script>
         let textoWhatsApp = ""; 
         let listaGlobalEscalas = [];
+        let listaAgendamentos = []; // NOVO: Variável para armazenar os agendamentos e buscar a hora
 
         window.onload = () => {
             fetch(URL_GAS)
                 .then(res => res.json())
                 .then(data => {
                     listaGlobalEscalas = data.escala || [];
+                    listaAgendamentos = data.agendamentos || []; // NOVO: Salva os agendamentos
                     carregarFiltroRegionais();
                     processarEscala();
                 })
                 .catch(() => document.getElementById("status").innerText = "Erro ao carregar dados.");
         };
 
-        // Lê as regionais existentes e popula o Dropdown
         function carregarFiltroRegionais() {
             if (listaGlobalEscalas.length === 0) return;
             
-            // Extrai nomes únicos das regionais usando Set
             const regionaisUnicas = [...new Set(listaGlobalEscalas.map(e => e.regional))].filter(Boolean).sort();
             
             const select = document.getElementById("filtroRegional");
@@ -91,7 +96,6 @@
             document.getElementById("containerFiltro").style.display = "block";
         }
 
-        // Chamado sempre que o usuário troca a opção no select
         function atualizarRelatorio() {
             processarEscala();
         }
@@ -126,16 +130,21 @@
             const strHoje = formatarDataISO(hoje);
             const str15Dias = formatarDataISO(daqui15Dias);
 
-            // Filtra por DATA (Próximos 15 dias) e por REGIONAL
             const agendados = [];
             listaGlobalEscalas.forEach(esc => {
                 const dataISO = padronizarDataString(esc.data);
                 
                 if (dataISO >= strHoje && dataISO <= str15Dias) {
                     if (regionalSelecionada === "Todas" || esc.regional === regionalSelecionada) {
+                        
+                        // NOVO: Cruza os dados da Escala com o Agendamento para descobrir o horário
+                        const agendamentoInfo = listaAgendamentos.find(ag => String(ag.linha) === String(esc.linhaAg));
+                        const horario = (agendamentoInfo && agendamentoInfo.horaInicio) ? agendamentoInfo.horaInicio : "--:--";
+
                         agendados.push({
                             dataISO: dataISO,
                             dataBR: dataISO.split('-').reverse().join('/'),
+                            hora: horario, // NOVO: Armazena a hora encontrada
                             regional: esc.regional,
                             oficina: esc.oficina,
                             instituicao: esc.instituicao,
@@ -153,7 +162,6 @@
                 return;
             }
 
-            // Agrupa por Regional e Oficina
             const agrupado = {};
             agendados.forEach(item => {
                 if (!agrupado[item.regional]) agrupado[item.regional] = {};
@@ -161,7 +169,6 @@
                 agrupado[item.regional][item.oficina].push(item);
             });
 
-            // Cria um título dinâmico para a mensagem do WhatsApp baseada no filtro
             let tituloWhatsApp = regionalSelecionada === "Todas" 
                 ? "📅 *ESCALA GERAL - PRÓXIMOS 15 DIAS* 📅\n\n" 
                 : `📅 *ESCALA ${regionalSelecionada.toUpperCase()} - PRÓXIMOS 15 DIAS* 📅\n\n`;
@@ -170,7 +177,6 @@
             let txtWPP = tituloWhatsApp;
 
             Object.keys(agrupado).sort().forEach(regiao => {
-                // Só exibe o subtítulo da regional se estivermos no relatório geral
                 if (regionalSelecionada === "Todas") {
                     htmlHTML += `<h2 class="regional-titulo">📍 ${regiao}</h2>`;
                     txtWPP += `📍 *${regiao.toUpperCase()}*\n`;
@@ -183,8 +189,13 @@
                     const lista = agrupado[regiao][oficina].sort((a, b) => a.dataISO.localeCompare(b.dataISO));
                     
                     lista.forEach(item => {
-                        let linha = `🗓️ ${item.dataBR.substring(0,5)} - ${item.instituicao}: ${item.instrutores}`;
-                        htmlHTML += `<div class="escala-item"><strong>${item.dataBR.substring(0,5)}</strong> | ${item.instituicao} <br> <span style="color:#666">Equipe: ${item.instrutores}</span></div>`;
+                        // NOVO: Montagem da linha com Data - Hora - Escola - Equipe
+                        let linha = `🗓️ ${item.dataBR.substring(0,5)} - ${item.hora} - ${item.instituicao} - ${item.instrutores}`;
+                        
+                        // Atualiza a visualização na tela
+                        htmlHTML += `<div class="escala-item"><strong>${item.dataBR.substring(0,5)} às ${item.hora}</strong> | ${item.instituicao} <br> <span style="color:#666">Equipe: ${item.instrutores}</span></div>`;
+                        
+                        // Atualiza a string que será enviada pro WhatsApp
                         txtWPP += `▪️ ${linha}\n`;
                     });
                     txtWPP += "\n";
@@ -197,12 +208,10 @@
 
             textoWhatsApp = txtWPP + "💡 _Bom trabalho a todos!_";
 
-            // Atualiza a tela
             document.getElementById("status").style.display = "none";
             document.getElementById("conteudoRelatorio").innerHTML = htmlHTML;
             document.getElementById("conteudoRelatorio").style.display = "block";
             
-            // Atualiza o texto do botão do WhatsApp
             document.getElementById("txtBotaoZap").innerText = regionalSelecionada === "Todas" ? "Compartilhar Relatório Geral" : `Compartilhar Escala ${regionalSelecionada}`;
             document.getElementById("btnZap").style.display = "flex";
         }
