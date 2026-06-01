@@ -129,34 +129,32 @@
             const tbody = document.querySelector("#tabelaComparativa tbody");
             tbody.innerHTML = "";
 
-            // Cria um dicionário para juntar as duas planilhas
+            // O mapa agora usa a linha como identificador para garantir que duplicatas não sejam suprimidas
             const mapaCruzamento = {};
 
-            // Função para garantir que todas as datas se conversem perfeitamente
             const padronizarData = (d) => {
                 if (!d) return "";
-                if (d.includes('/')) {
-                    let p = d.split('/');
+                let apenasData = d.toString().split(' ')[0].split('T')[0]; 
+                if (apenasData.includes('/')) {
+                    let p = apenasData.split('/');
                     return `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
                 }
-                return d.substring(0, 10);
+                return apenasData.substring(0, 10);
             };
 
             // 1. CARREGA TUDO O QUE FOI ESCALADO
             if (db.escala) {
                 db.escala.forEach(esc => {
                     const dataISO = padronizarData(esc.data);
-                    
-                    // Aplicação dos Filtros
                     if ((inicio && dataISO < inicio) || (fim && dataISO > fim)) return;
                     if (regFiltro !== "Todas" && esc.regional !== regFiltro) return;
                     if (ofiFiltro !== "Todas" && esc.oficina !== ofiFiltro) return;
 
-                    // Adicionei a regional na chave para evitar conflito se a mesma oficina rodar em 2 lugares no mesmo dia
-                    const chave = dataISO + "|||" + esc.regional + "|||" + esc.oficina;
+                    // Chave única baseada na LINHA da planilha (garante exclusividade)
+                    const chave = "esc_" + esc.linhaAg;
                     mapaCruzamento[chave] = {
                         data: dataISO,
-                        regional: esc.regional,
+                        regional: esc.regional || "-",
                         oficina: esc.oficina,
                         escalados: esc.instrutoresEscalados || "",
                         realizados: ""
@@ -164,25 +162,30 @@
                 });
             }
 
-            // 2. CARREGA TUDO O QUE FOI REALIZADO (Unindo se a escala já existir)
+            // 2. CARREGA TUDO O QUE FOI REALIZADO
             if (db.realizadas) {
                 db.realizadas.forEach(real => {
                     const dataISO = padronizarData(real.data);
-                    
-                    // Aplicação dos Filtros
                     if ((inicio && dataISO < inicio) || (fim && dataISO > fim)) return;
                     if (regFiltro !== "Todas" && real.regional !== regFiltro) return;
                     if (ofiFiltro !== "Todas" && real.oficina !== ofiFiltro) return;
 
-                    const chave = dataISO + "|||" + real.regional + "|||" + real.oficina;
-                    
-                    if (mapaCruzamento[chave]) {
-                        mapaCruzamento[chave].realizados = real.instrutores || "";
-                    } else {
-                        // Se não tem escala, cria a linha só com o que foi realizado
+                    // Tenta achar se existe uma escala correspondente pela linha
+                    let encontrou = false;
+                    for (let chave in mapaCruzamento) {
+                        if (chave === "esc_" + real.linhaAg) {
+                            mapaCruzamento[chave].realizados = real.instrutores || "";
+                            encontrou = true;
+                            break;
+                        }
+                    }
+
+                    // Se não existia escala, cria uma entrada nova para o realizado
+                    if (!encontrou) {
+                        const chave = "real_" + real.linhaAg;
                         mapaCruzamento[chave] = {
                             data: dataISO,
-                            regional: real.regional,
+                            regional: real.regional || "-",
                             oficina: real.oficina,
                             escalados: "",
                             realizados: real.instrutores || ""
