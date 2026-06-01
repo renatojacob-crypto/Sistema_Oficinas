@@ -60,6 +60,13 @@
         window.onload = () => { 
             fetch(URL_GAS).then(res => res.json()).then(data => {
                 db = data;
+                // CORREÇÃO: Definir uma data de início mais abrangente (ex: Janeiro/2026)
+                // Isso evita que o sistema esconda o histórico por padrão
+                document.getElementById("fInicio").value = "2026-01-01"; 
+                
+                // Define a data de fim como o dia de hoje
+                const hoje = new Date().toISOString().split('T')[0];
+                document.getElementById("fFim").value = hoje;
                 popularFiltros();
                 gerarRelatorio();
             }); 
