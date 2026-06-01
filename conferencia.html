@@ -129,7 +129,6 @@
             const tbody = document.querySelector("#tabelaComparativa tbody");
             tbody.innerHTML = "";
 
-            // O mapa agora usa a linha como identificador para garantir que duplicatas não sejam suprimidas
             const mapaCruzamento = {};
 
             const padronizarData = (d) => {
@@ -150,7 +149,7 @@
                     if (regFiltro !== "Todas" && esc.regional !== regFiltro) return;
                     if (ofiFiltro !== "Todas" && esc.oficina !== ofiFiltro) return;
 
-                    // Chave única baseada na LINHA da planilha (garante exclusividade)
+                    // A CHAVE É ÚNICA POR LINHA
                     const chave = "esc_" + esc.linhaAg;
                     mapaCruzamento[chave] = {
                         data: dataISO,
@@ -170,20 +169,14 @@
                     if (regFiltro !== "Todas" && real.regional !== regFiltro) return;
                     if (ofiFiltro !== "Todas" && real.oficina !== ofiFiltro) return;
 
-                    // Tenta achar se existe uma escala correspondente pela linha
-                    let encontrou = false;
-                    for (let chave in mapaCruzamento) {
-                        if (chave === "esc_" + real.linhaAg) {
-                            mapaCruzamento[chave].realizados = real.instrutores || "";
-                            encontrou = true;
-                            break;
-                        }
-                    }
-
-                    // Se não existia escala, cria uma entrada nova para o realizado
-                    if (!encontrou) {
-                        const chave = "real_" + real.linhaAg;
-                        mapaCruzamento[chave] = {
+                    // Tenta casar pela linha (linhaAg)
+                    const chaveEscala = "esc_" + real.linhaAg;
+                    if (mapaCruzamento[chaveEscala]) {
+                        mapaCruzamento[chaveEscala].realizados = real.instrutores || "";
+                    } else {
+                        // Caso realize algo que não estava na escala
+                        const chaveReal = "real_" + real.linhaAg;
+                        mapaCruzamento[chaveReal] = {
                             data: dataISO,
                             regional: real.regional || "-",
                             oficina: real.oficina,

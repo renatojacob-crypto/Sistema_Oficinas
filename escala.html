@@ -6,18 +6,8 @@
     <link rel="stylesheet" href="style.css">
     <style>
         .card-branco { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 20px; }
+        .agendamentos-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 15px; max-height: 400px; overflow-y: auto; padding-right: 5px; }
         
-        .agendamentos-grid { 
-            display: grid; 
-            grid-template-columns: 1fr; 
-            gap: 12px; 
-            margin-top: 15px; 
-            max-height: 400px; 
-            overflow-y: auto;
-            padding-right: 5px;
-        }
-        
-        /* NOVO: A cor de fundo agora é definida pela regional */
         .agendamento-card {
             background-color: var(--cor-fundo, #ffffff);
             border: 2px solid #e5e7eb;
@@ -31,18 +21,8 @@
             gap: 5px;
         }
 
-        /* Efeito ao passar o mouse: escurece um pouquinho a cor original */
-        .agendamento-card:hover {
-            filter: brightness(0.96);
-            border-color: #9ca3af;
-        }
-
-        /* Efeito ao clicar: borda marcante e escurece mais um pouco */
-        .agendamento-card.selecionado {
-            border-color: var(--primary-color) !important;
-            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2) !important;
-            filter: brightness(0.92);
-        }
+        .agendamento-card:hover { filter: brightness(0.96); border-color: #9ca3af; }
+        .agendamento-card.selecionado { border-color: var(--primary-color) !important; box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2) !important; filter: brightness(0.92); }
 
         .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-top: 10px; }
         .checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; background: #f9fafb; padding: 10px; border-radius: 6px; border: 1px solid #eee; transition: 0.2s; }
@@ -60,7 +40,7 @@
 
         <form id="formEscala" class="card-branco">
             <label style="font-weight: 600; font-size: 18px;">1. Selecione a Oficina Agendada:</label>
-            <p style="font-size: 13px; color: #6b7280; margin-bottom: 10px;">Abaixo estão apenas as oficinas que ainda não possuem escala definida. Clique em uma para selecionar.</p>
+            <p style="font-size: 13px; color: #6b7280; margin-bottom: 10px;">Clique na oficina específica que deseja escalar:</p>
             
             <div id="listaAgendamentos" class="agendamentos-grid">
                 <p style="color: #6b7280;">Sincronizando oficinas pendentes...</p>
@@ -76,26 +56,20 @@
     </div>
 
     <script>
-        if (sessionStorage.getItem("logado") !== "sim") {
-            window.location.href = "index.html"; 
-        }
+        if (sessionStorage.getItem("logado") !== "sim") { window.location.href = "index.html"; }
     </script>
-
     <script src="config.js"></script>
     <script>
         let dadosGlobais = {};
         let agendamentoSelecionadoId = null;
 
-        // NOVO: Função que descobre a cor baseada no nome da Regional
         function obterCorRegional(regional) {
             if (!regional) return "#ffffff";
             const reg = regional.toLowerCase();
-            
-            if (reg.includes("itabira")) return "#dcfce7"; // Verde Claro
-            if (reg.includes("governador") || reg.includes("valadares") || reg.includes("gov.")) return "#dbeafe"; // Azul Claro
-            if (reg.includes("vitória") || reg.includes("vitoria")) return "#fef9c3"; // Amarelo Claro
-            
-            return "#ffffff"; // Branco para regionais que não tem cor definida
+            if (reg.includes("itabira")) return "#dcfce7";
+            if (reg.includes("governador") || reg.includes("valadares") || reg.includes("gov.")) return "#dbeafe";
+            if (reg.includes("vitória") || reg.includes("vitoria")) return "#fef9c3";
+            return "#ffffff";
         }
 
         window.onload = () => {
@@ -103,52 +77,44 @@
                 .then(res => res.json())
                 .then(data => {
                     dadosGlobais = data;
-                    const containerAgendamentos = document.getElementById("listaAgendamentos");
-                    containerAgendamentos.innerHTML = ""; 
-                    
-                    const escalasExistentes = data.escala ? data.escala.map(e => String(e.linhaAg)) : [];
-                    const agendamentosSemEscala = data.agendamentos.filter(ag => !escalasExistentes.includes(String(ag.linha)));
-
-                    if (agendamentosSemEscala.length === 0) {
-                        containerAgendamentos.innerHTML = '<p style="color: var(--primary-color); font-weight: bold; text-align: center; padding: 30px; background: #f0fdf4; border-radius: 8px;">🎉 Todas as oficinas já possuem instrutores escalados!</p>';
-                    } else {
-                        agendamentosSemEscala.forEach(ag => {
-                            const horario = ag.horaInicio ? ag.horaInicio : "--:--";
-                            
-                            const card = document.createElement("div");
-                            card.className = "agendamento-card";
-                            
-                            // INJETA A COR NO CARTÃO AQUI
-                            card.style.setProperty('--cor-fundo', obterCorRegional(ag.regional));
-                            
-                            card.onclick = () => selecionarAgendamento(ag.linha, card);
-                            
-                            card.innerHTML = `
-                                <div class="info-titulo">📅 ${ag.dataOficina} às ${horario} - ${ag.oficina}</div>
-                                <div style="font-size: 14px; color: #1f2937;"><strong>Instituição:</strong> ${ag.instituicao}</div>
-                                <div style="font-size: 13px; color: #4b5563;"><strong>Cidade:</strong> ${ag.cidade} | <strong>Regional:</strong> ${ag.regional}</div>
-                            `;
-                            
-                            containerAgendamentos.appendChild(card);
-                        });
-                    }
-                })
-                .catch(err => {
-                    document.getElementById("listaAgendamentos").innerHTML = '<p style="color: red;">Erro ao carregar dados do servidor.</p>';
+                    renderizarLista();
                 });
         };
 
-        function selecionarAgendamento(linha, elementoClicado) {
-            agendamentoSelecionadoId = linha; 
-            const todosCartoes = document.querySelectorAll(".agendamento-card");
-            todosCartoes.forEach(card => card.classList.remove("selecionado"));
+        function renderizarLista() {
+            const container = document.getElementById("listaAgendamentos");
+            container.innerHTML = "";
             
-            elementoClicado.classList.add("selecionado");
-            carregarInstrutores(linha);
+            // Filtra o que já tem escala
+            const escalasExistentes = dadosGlobais.escala ? dadosGlobais.escala.map(e => String(e.linhaAg)) : [];
+            const pendentes = dadosGlobais.agendamentos.filter(ag => !escalasExistentes.includes(String(ag.linha)));
+
+            if (pendentes.length === 0) {
+                container.innerHTML = '<p style="text-align: center; padding: 20px; font-weight: bold; color: green;">🎉 Todas as oficinas já possuem escala!</p>';
+                return;
+            }
+
+            // Ordena pela data (ag.linha representa a ordem de entrada)
+            pendentes.sort((a,b) => b.linha - a.linha).forEach(ag => {
+                const card = document.createElement("div");
+                card.className = "agendamento-card";
+                card.style.setProperty('--cor-fundo', obterCorRegional(ag.regional));
+                card.onclick = () => {
+                    document.querySelectorAll(".agendamento-card").forEach(c => c.classList.remove("selecionado"));
+                    card.classList.add("selecionado");
+                    agendamentoSelecionadoId = ag.linha;
+                    carregarInstrutores(ag);
+                };
+                card.innerHTML = `
+                    <div class="info-titulo">📅 ${ag.dataOficina} | ${ag.oficina}</div>
+                    <div style="font-size: 14px;"><strong>Instituição:</strong> ${ag.instituicao}</div>
+                    <div style="font-size: 13px; color: #4b5563;"><strong>Regional:</strong> ${ag.regional} | <strong>Linha:</strong> ${ag.linha}</div>
+                `;
+                container.appendChild(card);
+            });
         }
 
-        function carregarInstrutores(linha) {
-            const ag = dadosGlobais.agendamentos.find(a => String(a.linha) === String(linha));
+        function carregarInstrutores(ag) {
             const container = document.getElementById("instrutoresContainer");
             container.innerHTML = "";
             
@@ -156,46 +122,24 @@
                 i[3] === ag.regional || ag.regional.includes(i[3].replace("Gov.", "Governador"))
             );
 
-            if (instrutoresDaRegional.length === 0) {
-                container.innerHTML = "<p style='color: #ef4444; grid-column: 1/-1;'>Nenhum instrutor cadastrado para a regional desta oficina.</p>";
-            } else {
-                instrutoresDaRegional.forEach(i => {
-                    container.innerHTML += `
-                        <label class="checkbox-label">
-                            <input type="checkbox" name="inst" value="${i[1]}"> 
-                            ${i[1]}
-                        </label>`;
-                });
-            }
-            
+            instrutoresDaRegional.forEach(i => {
+                container.innerHTML += `
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="inst" value="${i[1]}"> ${i[1]}
+                    </label>`;
+            });
             document.getElementById("corpoEscala").style.display = "block";
-            document.getElementById("corpoEscala").scrollIntoView({ behavior: 'smooth' });
         }
 
         document.getElementById("formEscala").onsubmit = (e) => {
             e.preventDefault();
-            
-            if (!agendamentoSelecionadoId) {
-                alert("Por favor, clique em um cartão de oficina primeiro.");
-                return;
-            }
-
             const selecionados = Array.from(document.querySelectorAll('input[name="inst"]:checked')).map(c => c.value).join(", ");
-            
-            if (!selecionados) {
-                alert("Atenção: Selecione pelo menos um instrutor para salvar a escala.");
-                return;
-            }
-
-            const btn = document.getElementById("btnSalvar");
-            btn.disabled = true;
-            btn.innerText = "Salvando Escala...";
+            if (!selecionados) return alert("Selecione um instrutor.");
 
             const ag = dadosGlobais.agendamentos.find(a => String(a.linha) === String(agendamentoSelecionadoId));
-
+            
             fetch(URL_GAS, {
-                method: "POST",
-                mode: "no-cors",
+                method: "POST", mode: "no-cors",
                 body: JSON.stringify({
                     tipoEnvio: "SALVAR_ESCALA",
                     linhaAgendamento: ag.linha,
@@ -205,14 +149,7 @@
                     instituicao: ag.instituicao,
                     instrutoresEscalados: selecionados
                 })
-            }).then(() => {
-                alert("Escala salva com sucesso!");
-                location.reload(); 
-            }).catch(err => {
-                alert("Erro ao salvar. Verifique sua conexão com a internet.");
-                btn.disabled = false;
-                btn.innerText = "Salvar Escala";
-            });
+            }).then(() => { alert("Escala salva!"); location.reload(); });
         };
     </script>
 </body>

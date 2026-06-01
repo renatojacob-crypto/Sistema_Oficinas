@@ -8,25 +8,19 @@
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
     <style>
         #calendar { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        .fc-event { cursor: pointer; border: none; padding: 3px 6px; border-radius: 4px; font-size: 0.85em; }
         .filter-container { 
-            background: white; 
-            padding: 15px 20px; 
-            border-radius: 12px; 
-            margin-bottom: 20px; 
-            display: flex; 
-            align-items: center; 
-            gap: 15px; 
-            box-shadow: 0 4px 12px rgb(255, 255, 255);
-            border: 1px solid var(--border-color);
+            background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px;
+            display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); 
+            gap: 15px; border: 1px solid var(--border-color); align-items: end;
         }
-        .filter-container label { margin: 0; font-weight: 600; color: var(--text-color); }
-        .filter-container select { width: auto; margin-bottom: 0; padding: 8px 15px; }
+        .filter-group { display: flex; flex-direction: column; gap: 5px; }
+        .filter-group label { font-weight: 600; font-size: 13px; color: var(--text-color); }
+        .filter-group select { padding: 8px; border-radius: 6px; border: 1px solid #ccc; }
     </style>
 </head>
 <body>
 
-    <div class="container" style="max-width: 1100px; background-color: transparent; box-shadow: none; margin-top: 20px;">
+    <div class="container" style="max-width: 1200px; background-color: transparent; box-shadow: none; margin-top: 20px;">
         <a href="siscontrol.html" style="text-decoration: none; color: var(--primary-color); font-weight: 700;">← Voltar ao Início</a>
         
         <header class="form-header" style="margin-top: 15px; background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
@@ -34,13 +28,27 @@
         </header>
 
         <div class="filter-container">
-            <label for="filtroStatus">Filtrar Status:</label>
-            <select id="filtroStatus" onchange="filtrarAgenda()">
-                <option value="Todos">Exibir Tudo</option>
-                <option value="Agendada">Agendadas</option>
-                <option value="Realizada">Realizadas</option>
-                <option value="Cancelada">Canceladas</option>
-            </select>
+            <div class="filter-group">
+                <label>Status:</label>
+                <select id="filtroStatus" onchange="aplicarFiltros()">
+                    <option value="Todos">Exibir Tudo</option>
+                    <option value="Agendada">Agendadas</option>
+                    <option value="Realizada">Realizadas</option>
+                    <option value="Cancelada">Canceladas</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Regional:</label>
+                <select id="filtroRegional" onchange="aplicarFiltros()">
+                    <option value="Todas">Todas</option>
+                </select>
+            </div>
+            <div class="filter-group">
+                <label>Oficina:</label>
+                <select id="filtroOficina" onchange="aplicarFiltros()">
+                    <option value="Todas">Todas</option>
+                </select>
+            </div>
         </div>
 
         <div id="status" class="loading" style="background: white; border-radius: 12px; padding: 40px;">Sincronizando agendamentos...</div>
@@ -48,95 +56,69 @@
     </div>
 
     <script src="config.js"></script>
-
     <script>
         let todosEventos = []; 
         let calendar; 
 
-        const cores = ['#0056b3', '#28a745', '#dc3545', '#ffc107', '#17a2b8', '#6f42c1', '#fd7e14', '#20c997'];
-        let corMapa = {};
-        let corIndex = 0;
-
         window.onload = () => {
-            if (typeof URL_GAS === 'undefined') {
-                document.getElementById("status").innerText = "Erro: URL do banco de dados não encontrada no config.js.";
-                return;
-            }
-
             fetch(URL_GAS)
                 .then(res => res.json())
                 .then(data => {
-                    // Verifica se o banco de dados retornou a lista de agenda
-                    if (!data.agendaCompleta) {
-                        document.getElementById("status").innerText = "Atenção: Não foi possível ler a lista de agendamentos.";
-                        return;
-                    }
+                    // Carrega dados base
+                    const dash = data.agendamentosDashboard || [];
+                    const full = data.agendaCompleta || [];
+                    
+                    // Popular filtros
+                    const regs = [...new Set(dash.map(a => a.regional))].filter(Boolean);
+                    const ofis = [...new Set(dash.map(a => a.oficina))].filter(Boolean);
+                    
+                    regs.forEach(r => document.getElementById('filtroRegional').innerHTML += `<option value="${r}">${r}</option>`);
+                    ofis.forEach(o => document.getElementById('filtroOficina').innerHTML += `<option value="${o}">${o}</option>`);
 
-                    // Prepara os eventos filtrando entradas sem data válida
-                    todosEventos = data.agendaCompleta
-                        .filter(ag => ag.start && ag.start !== "") // Pula agendamentos sem data
-                        .map(ag => {
-                            if(!corMapa[ag.oficina]) {
-                                corMapa[ag.oficina] = cores[corIndex % cores.length];
-                                corIndex++;
+                    // Mapeia eventos com extendedProps (incluindo regional e oficina para filtro)
+                    todosEventos = full.map((ev, index) => {
+                        const info = dash[index] || {};
+                        return {
+                            ...ev,
+                            extendedProps: {
+                                status: ev.status,
+                                regional: info.regional,
+                                oficina: ev.oficina
                             }
-                            
-                            let statusLimpo = ag.status || "Agendada";
-                            let eventColor = statusLimpo === "Cancelada" ? "#9ca3af" : 
-                                             statusLimpo === "Realizada" ? "#10b981" : corMapa[ag.oficina];
-
-                            return {
-                                title: (statusLimpo === "Cancelada" ? "[X] " : "") + ag.title,
-                                start: ag.start,
-                                end: ag.end,
-                                color: eventColor,
-                                extendedProps: {
-                                    status: statusLimpo,
-                                    oficina: ag.oficina
-                                }
-                            };
-                        });
+                        };
+                    });
 
                     renderizarCalendario(todosEventos);
-                })
-                .catch(err => {
-                    document.getElementById("status").innerText = "Erro de sincronização. Verifique sua conexão ou a planilha.";
-                    console.error(err);
                 });
         };
 
-        function renderizarCalendario(eventosParaExibir) {
+        function renderizarCalendario(eventos) {
             document.getElementById("status").style.display = "none";
-            const calendarEl = document.getElementById('calendar');
-            calendarEl.style.display = "block";
+            const calEl = document.getElementById('calendar');
+            calEl.style.display = "block";
 
-            calendar = new FullCalendar.Calendar(calendarEl, {
-                initialView: 'dayGridMonth',
-                locale: 'pt-br',
-                headerToolbar: {
-                    left: 'prev,next today',
-                    center: 'title',
-                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
-                },
-                events: eventosParaExibir,
-                eventClick: function(info) {
-                    alert("Oficina: " + info.event.extendedProps.oficina + 
-                          "\nStatus: " + info.event.extendedProps.status + 
-                          "\nInício: " + info.event.start.toLocaleString());
-                }
+            calendar = new FullCalendar.Calendar(calEl, {
+                initialView: 'dayGridMonth', locale: 'pt-br',
+                events: eventos,
+                eventClick: info => alert(`Oficina: ${info.event.title}\nStatus: ${info.event.extendedProps.status}`)
             });
             calendar.render();
         }
 
-        function filtrarAgenda() {
-            if (!calendar) return;
-            const filtro = document.getElementById("filtroStatus").value;
-            const eventosFiltrados = (filtro === "Todos") 
-                ? todosEventos 
-                : todosEventos.filter(ev => ev.extendedProps.status === filtro);
+        function aplicarFiltros() {
+            const s = document.getElementById("filtroStatus").value;
+            const r = document.getElementById("filtroRegional").value;
+            const o = document.getElementById("filtroOficina").value;
+
+            const filtrados = todosEventos.filter(ev => {
+                const matchS = (s === "Todos" || ev.extendedProps.status === s);
+                const matchR = (r === "Todas" || ev.extendedProps.regional === r);
+                const matchO = (o === "Todas" || ev.extendedProps.oficina === o);
+                return matchS && matchR && matchO;
+            });
 
             calendar.removeAllEvents();
-            calendar.addEventSource(eventosFiltrados);
+            calendar.addEventSource(filtrados);
         }
     </script>
 </body>

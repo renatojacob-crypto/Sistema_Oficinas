@@ -177,11 +177,12 @@
 
             btn.innerText = "Agendando...";
             btn.disabled = true;
-
+            const dataRaw = document.getElementById("dataOficina").value; // Ex: 2026-05-05
+            const [ano, mes, dia] = dataRaw.split('-');
             const payload = {
                 regional: document.getElementById("regional").value,
                 oficina: document.getElementById("oficina").value,
-                dataOficina: document.getElementById("dataOficina").value,
+                dataOficina: `${dia}/${mes}/${ano}`, // Garante que a planilha receba DD/MM/AAAA
                 horaInicio: document.getElementById("horaInicio").value,
                 horaFim: document.getElementById("horaFim").value,
                 cidade: document.getElementById("cidade").value,

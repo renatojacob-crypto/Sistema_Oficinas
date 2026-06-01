@@ -242,7 +242,7 @@
                 const horario = ag.horaInicio ? ag.horaInicio : "--:--";
                 const card = document.createElement("div");
                 card.className = "agendamento-card";
-                
+                card.setAttribute('data-linha', ag.linha);
                 card.style.setProperty('--cor-fundo', obterCorRegional(ag.regional));
                 card.onclick = () => preencherDadosAgendamento(ag.linha, card);
                 
@@ -270,9 +270,13 @@
             elemento.classList.add("selecionado");
 
             const ag = agendamentosGlobais.find(a => a.linha == linha);
+            if (!ag) {
+                console.error("Agendamento não encontrado para a linha: " + linha);
+                return;
+            }
             const horario = ag.horaInicio ? ag.horaInicio : "--:--";
 
-            document.getElementById("resumoOficina").value = `${ag.dataOficina} às ${horario} | ${ag.oficina} - ${ag.instituicao}`;
+            document.getElementById("resumoOficina").value = `${ag.dataOficina} | ${ag.oficina} - ${ag.instituicao}`;
             document.getElementById("dataOficina").value = ag.dataOficina;
             document.getElementById("local").value = ag.regional;
             document.getElementById("cidade").value = ag.cidade;
@@ -400,7 +404,7 @@
 
             const payload = {
                 linhaAgendamento: linhaAgendamentoAtual,
-                status: statusEnvio,
+                status: status,
                 motivoCancelamento: document.getElementById("motivoCancelamento").value,
                 dataDaOficina: document.getElementById("dataOficina").value,
                 local: document.getElementById("local").value,
