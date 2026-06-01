@@ -5,217 +5,125 @@
     <title>Conferência Escala vs Realizado</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .match { color: #10b981; font-weight: bold; } /* Verde */
-        .mismatch { color: #ef4444; font-weight: bold; } /* Vermelho */
-        .alerta { color: #f59e0b; font-weight: bold; } /* Laranja */
+        .match { color: #10b981; font-weight: bold; }
+        .mismatch { color: #ef4444; font-weight: bold; }
+        .alerta { color: #f59e0b; font-weight: bold; }
         .table-container { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 20px;}
         table { width: 100%; border-collapse: collapse; }
         th { background: var(--primary-color); color: white; padding: 12px; text-align: left; font-size: 14px;}
         td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px;}
         tr:hover { background: #f9fafb; }
-        
-        /* Layout responsivo para os filtros */
-        .filtros-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 15px; align-items: end; }
-        @media (max-width: 900px) { .filtros-grid { grid-template-columns: 1fr 1fr; } }
-        @media (max-width: 500px) { .filtros-grid { grid-template-columns: 1fr; } }
-        
-        .form-group-filter { margin: 0; display: flex; flex-direction: column; }
-        .form-group-filter label { font-weight: 600; font-size: 13px; margin-bottom: 5px; color: #4b5563; }
-        .form-group-filter input, .form-group-filter select { margin-bottom: 0; padding: 10px; border-radius: 6px; border: 1px solid #ccc; width: 100%; box-sizing: border-box; }
-        .btn-filtrar { margin: 0; padding: 10px 25px; height: 40px; cursor: pointer; }
+        .filtros-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 15px; align-items: end; background: #f9fafb; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; }
     </style>
 </head>
 <body>
     <div class="container" style="max-width: 1200px;">
-        <a href="siscontrol.html" style="text-decoration: none; color: var(--primary-color); font-weight: 700;">← Voltar ao Início</a>
+        <div style="background: white; padding: 10px; border-radius: 8px; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+            <a href="siscontrol.html" style="text-decoration: none; color: var(--primary-color); font-weight: 700;">⬅️ Voltar ao Início</a>
+        </div>
         
         <header class="form-header" style="margin-top: 15px;">
-            <h1 style="color: var(--primary-color); margin: 0;">Relatório: Escala vs Realizado</h1>
+            <h1 style="color: var(--primary-color); margin: 0;">Relatório: Conferência de Agendamentos</h1>
         </header>
         
-        <!-- BARRA DE FILTROS ATUALIZADA -->
-        <div class="table-container filtros-grid" style="background: #f9fafb;">
-            <div class="form-group-filter">
-                <label>Data Início:</label>
-                <input type="date" id="fInicio">
-            </div>
-            <div class="form-group-filter">
-                <label>Data Fim:</label>
-                <input type="date" id="fFim">
-            </div>
-            <div class="form-group-filter">
-                <label>Regional:</label>
-                <select id="fRegional">
-                    <option value="Todas">Todas as Regionais</option>
-                </select>
-            </div>
-            <div class="form-group-filter">
-                <label>Oficina:</label>
-                <select id="fOficina">
-                    <option value="Todas">Todas as Oficinas</option>
-                </select>
-            </div>
-            <button class="btn-filtrar" onclick="gerarRelatorio()">Filtrar</button>
+        <div class="table-container filtros-grid">
+            <div><label>Data Início:</label><input type="date" id="fInicio" style="width:100%; padding:8px;"></div>
+            <div><label>Data Fim:</label><input type="date" id="fFim" style="width:100%; padding:8px;"></div>
+            <div><label>Regional:</label><select id="fRegional" style="width:100%; padding:8px;"><option value="Todas">Todas</option></select></div>
+            <div><label>Oficina:</label><select id="fOficina" style="width:100%; padding:8px;"><option value="Todas">Todas</option></select></div>
+            <button onclick="gerarRelatorio()" style="padding: 10px 20px; background: var(--primary-color); color:white; border:none; border-radius:6px; cursor:pointer;">Filtrar</button>
         </div>
 
-        <!-- TABELA -->
         <div class="table-container" style="overflow-x: auto;">
             <table id="tabelaComparativa">
                 <thead>
                     <tr>
                         <th>Data</th>
+                        <th>Hora Início</th>
                         <th>Regional</th>
                         <th>Oficina</th>
-                        <th>Instrutores Escalados</th>
-                        <th>Quem Realizou (Registro)</th>
+                        <th>Escalados</th>
+                        <th>Realizados</th>
                         <th>Status</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <tr><td colspan="6" style="text-align:center;">Carregando dados do servidor...</td></tr>
+                    <tr><td colspan="7" style="text-align:center;">Carregando...</td></tr>
                 </tbody>
             </table>
         </div>
     </div>
 
-    <!-- Script de Segurança (Opcional, adicione se usar na plataforma restrita) -->
-    <script>
-        if (sessionStorage.getItem("logado") !== "sim") {
-            window.location.href = "index.html"; 
-        }
-    </script>
-
     <script src="config.js"></script>
     <script>
         let db = {};
-        
         window.onload = () => { 
-            fetch(URL_GAS)
-                .then(res => res.json())
-                .then(data => {
-                    db = data;
-                    
-                    // Popula as seleções de Regional e Oficina dinamicamente
-                    let regionaisSet = new Set();
-                    let oficinasSet = new Set();
-                    
-                    if (db.escala) {
-                        db.escala.forEach(e => { regionaisSet.add(e.regional); oficinasSet.add(e.oficina); });
-                    }
-                    if (db.realizadas) {
-                        db.realizadas.forEach(r => { regionaisSet.add(r.regional); oficinasSet.add(r.oficina); });
-                    }
-
-                    const selectReg = document.getElementById("fRegional");
-                    [...regionaisSet].filter(Boolean).sort().forEach(reg => {
-                        selectReg.innerHTML += `<option value="${reg}">${reg}</option>`;
-                    });
-
-                    const selectOfi = document.getElementById("fOficina");
-                    [...oficinasSet].filter(Boolean).sort().forEach(ofi => {
-                        selectOfi.innerHTML += `<option value="${ofi}">${ofi}</option>`;
-                    });
-
-                    gerarRelatorio();
-                }); 
+            fetch(URL_GAS).then(res => res.json()).then(data => {
+                db = data;
+                popularFiltros();
+                gerarRelatorio();
+            }); 
         };
+
+        function popularFiltros() {
+            const regs = [...new Set(db.agendamentos.map(a => a.regional))].filter(Boolean).sort();
+            const ofis = [...new Set(db.agendamentos.map(a => a.oficina))].filter(Boolean).sort();
+            regs.forEach(r => document.getElementById('fRegional').innerHTML += `<option value="${r}">${r}</option>`);
+            ofis.forEach(o => document.getElementById('fOficina').innerHTML += `<option value="${o}">${o}</option>`);
+        }
 
         function gerarRelatorio() {
             const inicio = document.getElementById("fInicio").value;
             const fim = document.getElementById("fFim").value;
+            const regFiltro = document.getElementById("fRegional").value;
+            const ofiFiltro = document.getElementById("fOficina").value;
             const tbody = document.querySelector("#tabelaComparativa tbody");
             tbody.innerHTML = "";
 
-            // mapaCruzamento agora usa o ID da LINHA como chave primária
-            const mapaCruzamento = {};
+            const mapa = {};
 
-            const padronizarData = (d) => {
-                if (!d) return "";
-                if (d.includes('/')) {
-                    let p = d.split('/');
-                    return `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
-                }
-                return d.substring(0, 10);
-            };
+            // Processa Escala
+            db.escala.forEach(esc => {
+                const ag = db.agendamentos.find(a => String(a.linha) === String(esc.linhaAg));
+                if (!ag) return;
+                if ((inicio && ag.dataOficina < inicio) || (fim && ag.dataOficina > fim)) return;
+                if (regFiltro !== "Todas" && ag.regional !== regFiltro) return;
+                if (ofiFiltro !== "Todas" && ag.oficina !== ofiFiltro) return;
 
-            // 1. CARREGA TUDO O QUE FOI ESCALADO (Usando linhaAg como chave)
-            if (db.escala) {
-                db.escala.forEach(esc => {
-                    const dataISO = padronizarData(esc.data);
-                    if ((inicio && dataISO < inicio) || (fim && dataISO > fim)) return;
-
-                    // Chave baseada na LINHA única
-                    const chave = "esc_" + esc.linhaAg; 
-                    mapaCruzamento[chave] = {
-                        data: dataISO,
-                        oficina: esc.oficina,
-                        escalados: esc.instrutoresEscalados || "",
-                        realizados: ""
-                    };
-                });
-            }
-
-            // 2. CARREGA TUDO O QUE FOI REALIZADO (Cruzando pelo linhaAg)
-            if (db.realizadas) {
-                db.realizadas.forEach(real => {
-                    const dataISO = padronizarData(real.data);
-                    if ((inicio && dataISO < inicio) || (fim && dataISO > fim)) return;
-
-                    // O cruzamento DEVE ser feito por uma identificação única. 
-                    // Se o seu 'realizadas' não tem linhaAg, precisamos encontrar a correspondência correta:
-                    let chave = null;
-                    
-                    // Tenta achar a escala correspondente pela data, oficina e regional/instituição
-                    for (let c in mapaCruzamento) {
-                        if (mapaCruzamento[c].data === dataISO && mapaCruzamento[c].oficina === real.oficina) {
-                            chave = c;
-                            break;
-                        }
-                    }
-
-                    if (chave) {
-                        mapaCruzamento[chave].realizados = real.instrutores || "";
-                    } else {
-                        // Se não tem escala prévia, cria uma nova entrada única
-                        mapaCruzamento["real_" + Math.random()] = {
-                            data: dataISO,
-                            oficina: real.oficina,
-                            escalados: "",
-                            realizados: real.instrutores || ""
-                        };
-                    }
-                });
-            }
-
-            const listaFinal = Object.values(mapaCruzamento).sort((a, b) => b.data.localeCompare(a.data));
-
-            if (listaFinal.length === 0) {
-                tbody.innerHTML = "<tr><td colspan='5' style='text-align:center;'>Nenhum dado encontrado no período.</td></tr>";
-                return;
-            }
-
-            listaFinal.forEach(item => {
-                let dataBR = item.data.split('-').reverse().join('/');
-                // ... (o restante da renderização permanece igual)
-                tbody.innerHTML += `
-                    <tr>
-                        <td style="font-weight: 600;">${dataBR}</td>
-                        <td>${item.oficina}</td>
-                        <td>${item.escalados || "<i style='color:#ccc'>Não havia escala</i>"}</td>
-                        <td>${item.realizados || "<i style='color:#ccc'>Ainda não registrada</i>"}</td>
-                        <td>${determinarStatus(item)}</td>
-                    </tr>`;
+                mapa["id_" + esc.linhaAg] = { 
+                    data: ag.dataOficina, hora: ag.horaInicio || "--:--", 
+                    reg: ag.regional, ofi: ag.oficina, 
+                    esc: esc.instrutoresEscalados, real: "" 
+                };
             });
-        }
 
-        // Função auxiliar para organizar o status
-        function determinarStatus(item) {
-            if (!item.escalados && item.realizados) return "<span class='mismatch'>🚨 Realizada sem Escala</span>";
-            if (item.escalados && !item.realizados) return "<span class='alerta'>⏳ Pendente</span>";
+            // Processa Realizadas (Cruzando pelo ID único da linha)
+            db.realizadas.forEach(real => {
+                const chave = "id_" + real.linhaAg;
+                if (mapa[chave]) {
+                    mapa[chave].real = real.instrutores;
+                }
+            });
+
+            const lista = Object.values(mapa).sort((a,b) => b.data.localeCompare(a.data));
             
-            let ordEsc = item.escalados.split(',').map(s=>s.trim()).sort().join(',');
-            let ordReal = item.realizados.split(',').map(s=>s.trim()).sort().join(',');
-            return (ordEsc === ordReal) ? "<span class='match'>✅ Tudo Certo</span>" : "<span class='mismatch'>⚠️ Divergente</span>";
+            lista.forEach(item => {
+                let status = "⚠️ Divergente";
+                let cor = "mismatch";
+                if (!item.esc && item.real) { status = "🚨 Realizada sem Escala"; cor = "mismatch"; }
+                else if (item.esc && !item.real) { status = "⏳ Pendente"; cor = "alerta"; }
+                else if (item.esc === item.real) { status = "✅ Tudo Certo"; cor = "match"; }
+
+                tbody.innerHTML += `<tr>
+                    <td>${item.data.split('-').reverse().join('/')}</td>
+                    <td>${item.hora}</td>
+                    <td>${item.reg}</td>
+                    <td>${item.ofi}</td>
+                    <td>${item.esc || "---"}</td>
+                    <td>${item.real || "---"}</td>
+                    <td class="${cor}">${status}</td>
+                </tr>`;
+            });
         }
     </script>
 </body>
