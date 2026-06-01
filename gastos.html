@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lançamento de Gastos Realizados</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .readonly-field { background-color: #f3f4f6 !important; color: #b91c1c !important; font-weight: 700; border: 1px solid #d1d5db !important; }
+        .hidden { display: none !important; }
+        
+        .agendamentos-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 15px; max-height: 350px; overflow-y: auto; padding-right: 5px; }
+        .agendamento-card { background-color: var(--cor-fundo, #ffffff); border: 2px solid #e5e7eb; border-radius: 10px; padding: 15px; cursor: pointer; transition: all 0.2s ease; text-align: left; display: flex; flex-direction: column; gap: 5px; box-shadow: 0 2px 4px rgba(0,0,0,0.02); }
+        .agendamento-card:hover { filter: brightness(0.96); border-color: #9ca3af; }
+        .agendamento-card.selecionado { border-color: var(--primary-color) !important; box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2) !important; filter: brightness(0.92); }
+        .info-titulo { color: var(--primary-color); font-weight: bold; font-size: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 5px; }
+        
+        .filtro-container { background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; margin-top: 15px; margin-bottom: 5px; }
+        
+        .box-financas { border: 1px solid #e5e7eb; border-radius: 8px; padding: 25px; margin-bottom: 20px; background: #ffffff; }
+        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
+        @media (max-width: 600px) { .grid-3 { grid-template-columns: 1fr; } }
+
+        .input-money { position: relative; }
+        .input-money::before { content: "R$"; position: absolute; left: 10px; top: 38px; color: #6b7280; font-weight: 600; }
+        .input-money input { padding-left: 35px !important; font-size: 18px; font-weight: bold; color: #b91c1c;}
+    </style>
+</head>
+<body>
+
+    <div class="container" style="max-width: 900px;">
+        <header class="form-header">
+            <img src="imagens/logopreto.png" alt="Logomarca da Empresa" class="logo-empresa">
+            <a href="siscontrol.html" style="text-decoration: none; color: var(--primary-color); font-size: 14px; font-weight: 600;">← Voltar ao Início</a>
+            <h1>Gastos<br>Realizados</h1>
+        </header>
+
+        <div id="status" class="loading">Sincronizando oficinas...</div>
+
+        <div id="areaSelecao">
+            <label style="font-weight: 700; font-size: 18px; color: var(--primary-color);">1 e 2. Selecione a Regional e a Oficina:</label>
+            
+            <div id="filtroBox" class="filtro-container hidden">
+                <label for="filtroRegional" style="font-size: 14px; font-weight: 600; color: #4b5563;">Regional:</label>
+                <select id="filtroRegional" onchange="filtrarCards()" style="width: 100%; padding: 10px; margin-top: 8px; border-radius: 6px; border: 1px solid #ccc;">
+                    <option value="Todas">Todas as Regionais</option>
+                </select>
+            </div>
+
+            <div id="listaAgendamentos" class="agendamentos-grid"></div>
+        </div>
+
+        <form id="formGastos" class="hidden" style="margin-top: 30px; border-top: 2px dashed #ccc; padding-top: 25px; background: #fef2f2; padding: 25px; border-radius: 12px; border: 1px solid #fecaca;">
+            
+            <div class="form-group" style="margin-bottom: 25px;">
+                <label style="color: #991b1b;">Oficina Selecionada para Lançamento:</label>
+                <input type="text" id="resumoOficina" class="readonly-field" readonly>
+            </div>
+
+            <div class="box-financas">
+                <label style="font-weight: 700; font-size: 18px; color: #991b1b; display: block; margin-bottom: 15px; border-bottom: 2px solid #fee2e2; padding-bottom: 10px;">3, 4 e 5. Lançamento do Gasto Real</label>
+                
+                <div class="grid-3">
+                    <div class="form-group">
+                        <label>Data Inicial do Gasto:</label>
+                        <input type="date" id="dataInicial" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Data Final do Gasto:</label>
+                        <input type="date" id="dataFinal" required>
+                    </div>
+                    <div class="form-group input-money">
+                        <label>Valor Total Realizado:</label>
+                        <input type="number" id="valorTotal" step="0.01" min="0" placeholder="0.00" required>
+                    </div>
+                </div>
+            </div>
+
+            <button type="submit" id="btnEnviar" style="width: 100%; height: 60px; font-size: 18px; margin-top: 15px; background-color: #b91c1c; border: none; color: white; border-radius: 8px; font-weight: bold; cursor: pointer;">Registrar Gasto Definitivo</button>
+        </form>
+    </div>
+
+    <!-- Script de Segurança -->
+    <script>
+        if (sessionStorage.getItem("logado") !== "sim") {
+            window.location.href = "index.html"; 
+        }
+    </script>
+
+    <script src="config.js"></script>
+
+    <script>
+        let agendamentosGlobais = []; 
+        let linhaAgendamentoAtual = null;
+        let objAgendamentoAtual = null;
+
+        function obterCorRegional(regional) {
+            if (!regional) return "#ffffff";
+            const reg = regional.toLowerCase();
+            if (reg.includes("itabira")) return "#dcfce7"; 
+            if (reg.includes("governador") || reg.includes("valadares") || reg.includes("gov.")) return "#dbeafe"; 
+            if (reg.includes("vitória") || reg.includes("vitoria")) return "#fef9c3"; 
+            return "#ffffff"; 
+        }
+
+        window.onload = () => {
+            fetch(URL_GAS)
+                .then(res => res.json())
+                .then(data => {
+                    // Puxa também do Dashboard para permitir lançar gastos de oficinas antigas
+                    agendamentosGlobais = data.agendamentos || [];
+                    
+                    const containerAgendamentos = document.getElementById("listaAgendamentos");
+                    containerAgendamentos.innerHTML = "";
+                    
+                    if (agendamentosGlobais.length > 0) {
+                        popularFiltroRegionais();
+                        renderizarCards("Todas"); 
+                    } else {
+                        containerAgendamentos.innerHTML = `<p style="text-align:center; padding:20px; color:green; font-weight:bold;">Não há oficinas no banco de dados para lançamento!</p>`;
+                    }
+
+                    document.getElementById("status").style.display = "none";
+                })
+                .catch(err => {
+                    document.getElementById("status").innerText = "Erro de conexão com o servidor.";
+                    document.getElementById("status").style.color = "#dc2626";
+                });
+        };
+
+        function popularFiltroRegionais() {
+            const regionaisUnicas = [...new Set(agendamentosGlobais.map(ag => ag.regional))].filter(Boolean).sort();
+            const select = document.getElementById("filtroRegional");
+            
+            regionaisUnicas.forEach(reg => {
+                select.innerHTML += `<option value="${reg}">${reg}</option>`;
+            });
+            
+            document.getElementById("filtroBox").classList.remove("hidden");
+        }
+
+        function filtrarCards() {
+            const regionalSelecionada = document.getElementById("filtroRegional").value;
+            renderizarCards(regionalSelecionada);
+        }
+
+        function renderizarCards(filtroRegional) {
+            const containerAgendamentos = document.getElementById("listaAgendamentos");
+            containerAgendamentos.innerHTML = "";
+            document.getElementById("formGastos").classList.add("hidden");
+            linhaAgendamentoAtual = null;
+
+            const listaFiltrada = filtroRegional === "Todas" 
+                ? agendamentosGlobais 
+                : agendamentosGlobais.filter(ag => ag.regional === filtroRegional);
+
+            if (listaFiltrada.length === 0) {
+                containerAgendamentos.innerHTML = `<p style="color: #6b7280; text-align: center; padding: 15px;">Nenhuma oficina encontrada.</p>`;
+                return;
+            }
+
+            listaFiltrada.forEach(ag => {
+                const horario = ag.horaInicio ? ag.horaInicio : "--:--";
+                const card = document.createElement("div");
+                card.className = "agendamento-card";
+                card.style.setProperty('--cor-fundo', obterCorRegional(ag.regional));
+                
+                card.onclick = () => preencherDadosAgendamento(ag.linha, card);
+                
+                card.innerHTML = `
+                    <div class="info-titulo">📅 ${ag.dataOficina} às ${horario} - ${ag.oficina}</div>
+                    <div style="font-size: 14px; color: #1f2937;"><strong>Instituição:</strong> ${ag.instituicao}</div>
+                    <div style="font-size: 13px; color: #4b5563;"><strong>Cidade:</strong> ${ag.cidade} | <strong>Regional:</strong> ${ag.regional}</div>
+                `;
+                containerAgendamentos.appendChild(card);
+            });
+        }
+
+        function preencherDadosAgendamento(linha, elemento) {
+            linhaAgendamentoAtual = linha;
+            document.querySelectorAll(".agendamento-card").forEach(c => c.classList.remove("selecionado"));
+            elemento.classList.add("selecionado");
+
+            objAgendamentoAtual = agendamentosGlobais.find(a => a.linha == linha);
+            const horario = objAgendamentoAtual.horaInicio ? objAgendamentoAtual.horaInicio : "--:--";
+
+            document.getElementById("resumoOficina").value = `${objAgendamentoAtual.dataOficina} às ${horario} | ${objAgendamentoAtual.oficina} - ${objAgendamentoAtual.instituicao}`;
+            
+            document.getElementById("formGastos").classList.remove("hidden");
+            document.getElementById("formGastos").scrollIntoView({ behavior: 'smooth' });
+        }
+
+        document.getElementById("formGastos").onsubmit = (e) => {
+            e.preventDefault();
+            const btn = document.getElementById("btnEnviar");
+
+            btn.innerText = "Sincronizando com o Banco...";
+            btn.disabled = true;
+
+            const payload = {
+                tipoEnvio: "SALVAR_GASTO_REAL",
+                linhaAgendamento: linhaAgendamentoAtual,
+                regional: objAgendamentoAtual.regional,
+                oficina: objAgendamentoAtual.oficina,
+                dataOficina: objAgendamentoAtual.dataOficina,
+                
+                dataInicial: document.getElementById("dataInicial").value,
+                dataFinal: document.getElementById("dataFinal").value,
+                valorTotal: parseFloat(document.getElementById("valorTotal").value)
+            };
+
+            fetch(URL_GAS, {
+                method: "POST",
+                mode: "no-cors",
+                body: JSON.stringify(payload)
+            })
+            .then(() => {
+                alert("Gasto Realizado salvo com sucesso!");
+                location.reload(); 
+            })
+            .catch(err => {
+                alert("Erro ao salvar. Verifique sua conexão.");
+                btn.innerText = "Registrar Gasto Definitivo";
+                btn.disabled = false;
+            });
+        };
+    </script>
+</body>
+</html>
