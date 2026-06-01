@@ -1,0 +1,258 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>Comparativo Financeiro de Oficinas</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        .card-branco { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 20px; }
+        
+        .filtros-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 15px; align-items: end; background: #f9fafb; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 25px; }
+        @media (max-width: 900px) { .filtros-grid { grid-template-columns: 1fr 1fr; } }
+        @media (max-width: 500px) { .filtros-grid { grid-template-columns: 1fr; } }
+        
+        .styled-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; text-align: center; }
+        .styled-table thead tr { background-color: var(--primary-color); color: #ffffff; font-weight: bold; }
+        .styled-table th, .styled-table td { padding: 12px 15px; border-bottom: 1px solid #dddddd; vertical-align: middle; }
+        .styled-table tbody tr:hover { background-color: #f8fafc; }
+        
+        .texto-esq { text-align: left; font-weight: 600; color: #1f2937; }
+        .texto-bold { font-weight: bold; }
+        
+        /* Cores Dinâmicas */
+        .cor-verde { color: #16a34a; font-weight: 900; }
+        .cor-vermelha { color: #dc2626; font-weight: 900; }
+        .cor-azul { color: #2563eb; font-weight: 900; }
+        
+        .badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
+        .bg-verde { background-color: #dcfce7; color: #166534; border: 1px solid #86efac; }
+        .bg-vermelha { background-color: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
+        .bg-azul { background-color: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+        
+        .btn-filtrar { height: 42px; padding: 0 25px; background: var(--primary-color); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; width: 100%; }
+        .btn-filtrar:hover { filter: brightness(0.9); }
+    </style>
+</head>
+<body>
+    <div class="container" style="max-width: 1200px;">
+        <a href="siscontrol.html" style="text-decoration: none; color: var(--primary-color); font-weight: 700;">← Voltar ao Início</a>
+        
+        <header class="form-header" style="margin-top: 15px;">
+            <h1 style="color: var(--primary-color); margin: 0;">📉 Dashboard Financeiro</h1>
+            <p style="margin-top: 5px; color: #6b7280;">Comparativo: Orçamento Previsto vs. Gastos Realizados</p>
+        </header>
+
+        <div class="card-branco">
+            
+            <div class="filtros-grid">
+                <div class="form-group" style="margin: 0;">
+                    <label>Data Início (Oficina):</label>
+                    <input type="date" id="dataInicio" style="margin: 0; padding: 10px;">
+                </div>
+                <div class="form-group" style="margin: 0;">
+                    <label>Data Fim (Oficina):</label>
+                    <input type="date" id="dataFim" style="margin: 0; padding: 10px;">
+                </div>
+                <div class="form-group" style="margin: 0;">
+                    <label>Regional:</label>
+                    <select id="filtroRegional" style="margin: 0; padding: 10px;">
+                        <option value="Todas">Todas</option>
+                    </select>
+                </div>
+                <div class="form-group" style="margin: 0;">
+                    <label>Oficina:</label>
+                    <select id="filtroOficina" style="margin: 0; padding: 10px;">
+                        <option value="Todas">Todas</option>
+                    </select>
+                </div>
+                <button class="btn-filtrar" onclick="gerarRelatorio()">Filtrar Dados</button>
+            </div>
+
+            <div id="status" class="loading">Carregando módulos financeiros do banco...</div>
+
+            <div style="overflow-x: auto;">
+                <table class="styled-table" id="tabelaComparativa" style="display: none;">
+                    <thead>
+                        <tr>
+                            <th class="texto-esq">Regional</th>
+                            <th class="texto-esq">Oficina</th>
+                            <th>Gastos Previstos</th>
+                            <th>Gastos Realizados</th>
+                            <th>Diferença (Real - Prev)</th>
+                            <th>Status Financeiro</th>
+                        </tr>
+                    </thead>
+                    <tbody id="corpoTabela">
+                        </tbody>
+                </table>
+            </div>
+            
+            <p id="msgVazio" style="display: none; text-align: center; color: #6b7280; padding: 20px; font-size: 16px;">Nenhum dado financeiro encontrado para os filtros selecionados.</p>
+        </div>
+    </div>
+
+    <script>
+        if (sessionStorage.getItem("logado") !== "sim") {
+            window.location.href = "index.html"; 
+        }
+    </script>
+
+    <script src="config.js"></script>
+    <script>
+        let dadosGlobais = {};
+
+        window.onload = () => {
+            fetch(URL_GAS)
+                .then(res => res.json())
+                .then(data => {
+                    dadosGlobais = data;
+                    
+                    // Configura datas padrão (Últimos 30 dias até hoje por padrão)
+                    const hoje = new Date();
+                    const trintaDiasAtras = new Date();
+                    trintaDiasAtras.setDate(hoje.getDate() - 30);
+                    
+                    document.getElementById("dataInicio").value = formatarDataInput(trintaDiasAtras);
+                    document.getElementById("dataFim").value = formatarDataInput(hoje);
+
+                    // Descobre todas as Regionais e Oficinas únicas registradas no financeiro
+                    let regionaisSet = new Set();
+                    let oficinasSet = new Set();
+
+                    (data.previsoes || []).forEach(p => { regionaisSet.add(p.regional); oficinasSet.add(p.oficina); });
+                    (data.gastos || []).forEach(g => { regionaisSet.add(g.regional); oficinasSet.add(g.oficina); });
+
+                    const selectReg = document.getElementById("filtroRegional");
+                    [...regionaisSet].filter(Boolean).sort().forEach(reg => {
+                        selectReg.innerHTML += `<option value="${reg}">${reg}</option>`;
+                    });
+
+                    const selectOfi = document.getElementById("filtroOficina");
+                    [...oficinasSet].filter(Boolean).sort().forEach(ofi => {
+                        selectOfi.innerHTML += `<option value="${ofi}">${ofi}</option>`;
+                    });
+
+                    gerarRelatorio(); 
+                })
+                .catch(err => {
+                    document.getElementById("status").innerText = "Erro ao conectar com o banco de dados financeiro.";
+                    document.getElementById("status").style.color = "red";
+                });
+        };
+
+        function formatarDataInput(dataObj) {
+            const y = dataObj.getFullYear();
+            const m = String(dataObj.getMonth() + 1).padStart(2, '0');
+            const d = String(dataObj.getDate()).padStart(2, '0');
+            return `${y}-${m}-${d}`;
+        }
+
+        function formatarMoeda(valor) {
+            return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+        }
+
+        function gerarRelatorio() {
+            document.getElementById("status").style.display = "none";
+            
+            const dtInicio = document.getElementById("dataInicio").value;
+            const dtFim = document.getElementById("dataFim").value;
+            const regFiltro = document.getElementById("filtroRegional").value;
+            const ofiFiltro = document.getElementById("filtroOficina").value;
+
+            if (!dtInicio || !dtFim) {
+                alert("Por favor, selecione um período de datas válido."); return;
+            }
+
+            // Dicionário para agrupar tudo pela chave "Regional|Oficina"
+            let mapaFinanceiro = {};
+
+            // 1. Processa as Previsões
+            (dadosGlobais.previsoes || []).forEach(p => {
+                if (p.dataOficina >= dtInicio && p.dataOficina <= dtFim) {
+                    if (regFiltro !== "Todas" && p.regional !== regFiltro) return;
+                    if (ofiFiltro !== "Todas" && p.oficina !== ofiFiltro) return;
+
+                    let chave = `${p.regional}|${p.oficina}`;
+                    if (!mapaFinanceiro[chave]) {
+                        mapaFinanceiro[chave] = { regional: p.regional, oficina: p.oficina, previsto: 0, realizado: 0 };
+                    }
+                    mapaFinanceiro[chave].previsto += p.total;
+                }
+            });
+
+            // 2. Processa os Gastos Realizados
+            (dadosGlobais.gastos || []).forEach(g => {
+                if (g.dataOficina >= dtInicio && g.dataOficina <= dtFim) {
+                    if (regFiltro !== "Todas" && g.regional !== regFiltro) return;
+                    if (ofiFiltro !== "Todas" && g.oficina !== ofiFiltro) return;
+
+                    let chave = `${g.regional}|${g.oficina}`;
+                    if (!mapaFinanceiro[chave]) {
+                        mapaFinanceiro[chave] = { regional: g.regional, oficina: g.oficina, previsto: 0, realizado: 0 };
+                    }
+                    mapaFinanceiro[chave].realizado += g.total;
+                }
+            });
+
+            const tbody = document.getElementById("corpoTabela");
+            tbody.innerHTML = "";
+            let temDados = false;
+
+            // Transforma o dicionário em Array e ordena por Regional, depois por Oficina
+            const listaResultados = Object.values(mapaFinanceiro).sort((a, b) => {
+                if (a.regional === b.regional) return a.oficina.localeCompare(b.oficina);
+                return a.regional.localeCompare(b.regional);
+            });
+
+            listaResultados.forEach(item => {
+                // Se tudo for zero, pula a linha (evita lixo no relatorio)
+                if (item.previsto === 0 && item.realizado === 0) return;
+                
+                temDados = true;
+                
+                // Cálculo exigido: Gastos Realizados menos Gastos Previstos
+                const diferenca = item.realizado - item.previsto;
+                
+                // Variáveis para cor e texto
+                let corClasse = "";
+                let badgeClasse = "";
+                let mensagem = "";
+
+                // Regras de Negócio do Status
+                if (diferenca < -0.01) { // Ligeira margem para evitar erro de arredondamento de centavos
+                    corClasse = "cor-verde";
+                    badgeClasse = "bg-verde";
+                    mensagem = "Oficina Abaixo do Orçamento";
+                } else if (diferenca > 0.01) {
+                    corClasse = "cor-vermelha";
+                    badgeClasse = "bg-vermelha";
+                    mensagem = "Oficina Fora do Orçamento";
+                } else {
+                    corClasse = "cor-azul";
+                    badgeClasse = "bg-azul";
+                    mensagem = "Oficina Dentro do Orçamento";
+                }
+
+                const tr = document.createElement("tr");
+                tr.innerHTML = `
+                    <td class="texto-esq">${item.regional}</td>
+                    <td class="texto-esq">${item.oficina}</td>
+                    <td class="texto-bold" style="color: #4b5563;">${formatarMoeda(item.previsto)}</td>
+                    <td class="texto-bold" style="color: #4b5563;">${formatarMoeda(item.realizado)}</td>
+                    <td class="${corClasse}">${formatarMoeda(diferenca)}</td>
+                    <td><span class="badge ${badgeClasse}">${mensagem}</span></td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            if (temDados) {
+                document.getElementById("tabelaComparativa").style.display = "table";
+                document.getElementById("msgVazio").style.display = "none";
+            } else {
+                document.getElementById("tabelaComparativa").style.display = "none";
+                document.getElementById("msgVazio").style.display = "block";
+            }
+        }
+    </script>
+</body>
+</html>
