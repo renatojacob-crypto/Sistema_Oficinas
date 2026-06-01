@@ -14,15 +14,16 @@
         td { padding: 12px; border-bottom: 1px solid #eee; font-size: 14px;}
         tr:hover { background: #f9fafb; }
         .filtros-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 15px; align-items: end; background: #f9fafb; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; }
+        .voltar-container { background: white; padding: 10px 15px; border-radius: 8px; display: inline-block; margin-bottom: 15px; box-shadow: 0 2px 4px rgba(0,0,0,0.1); }
     </style>
 </head>
 <body>
     <div class="container" style="max-width: 1200px;">
-        <div style="background: white; padding: 10px; border-radius: 8px; display: inline-block; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+        <div class="voltar-container">
             <a href="siscontrol.html" style="text-decoration: none; color: var(--primary-color); font-weight: 700;">⬅️ Voltar ao Início</a>
         </div>
         
-        <header class="form-header" style="margin-top: 15px;">
+        <header class="form-header">
             <h1 style="color: var(--primary-color); margin: 0;">Relatório: Conferência de Agendamentos</h1>
         </header>
         
@@ -60,13 +61,10 @@
         window.onload = () => { 
             fetch(URL_GAS).then(res => res.json()).then(data => {
                 db = data;
-                // CORREÇÃO: Definir uma data de início mais abrangente (ex: Janeiro/2026)
-                // Isso evita que o sistema esconda o histórico por padrão
+                // Datas padrão: desde o início do ano até hoje
                 document.getElementById("fInicio").value = "2026-01-01"; 
+                document.getElementById("fFim").value = new Date().toISOString().split('T')[0];
                 
-                // Define a data de fim como o dia de hoje
-                const hoje = new Date().toISOString().split('T')[0];
-                document.getElementById("fFim").value = hoje;
                 popularFiltros();
                 gerarRelatorio();
             }); 
@@ -82,59 +80,71 @@
         function gerarRelatorio() {
             const inicio = document.getElementById("fInicio").value;
             const fim = document.getElementById("fFim").value;
+            const regFiltro = document.getElementById("fRegional").value;
+            const ofiFiltro = document.getElementById("fOficina").value;
             const tbody = document.querySelector("#tabelaComparativa tbody");
             tbody.innerHTML = "";
 
             const mapa = {};
 
-            // 1. Criar chaves únicas baseadas nos dados visíveis
-            // Formato: Data_Regional_Oficina_Instituição
-            const getChave = (d, r, o, i) => `${d}_${r}_${o}_${i}`.replace(/\s+/g, '');
-
-            // Processa Escala
+            // 1. Processar Escalas como base
             db.escala.forEach(esc => {
                 const ag = db.agendamentos.find(a => String(a.linha) === String(esc.linhaAg));
                 if (!ag) return;
                 
-                const chave = getChave(ag.dataOficina, ag.regional, ag.oficina, ag.instituicao);
-                mapa[chave] = { 
+                if ((inicio && ag.dataOficina < inicio) || (fim && ag.dataOficina > fim)) return;
+                if (regFiltro !== "Todas" && ag.regional !== regFiltro) return;
+                if (ofiFiltro !== "Todas" && ag.oficina !== ofiFiltro) return;
+
+                mapa["id_" + esc.linhaAg] = { 
                     data: ag.dataOficina, hora: ag.horaInicio || "--:--", 
                     reg: ag.regional, ofi: ag.oficina, 
                     esc: esc.instrutoresEscalados, real: "" 
                 };
             });
 
-            // Processa Realizadas
+            // 2. Cruzar com Realizadas pelo mesmo ID da linha
             db.realizadas.forEach(real => {
-                const chave = getChave(real.data, real.regional, real.oficina, real.instituicao);
+                const chave = "id_" + real.linhaAg;
                 if (mapa[chave]) {
                     mapa[chave].real = real.instrutores;
                 } else {
-                    // Adiciona se não tinha escala
-                    mapa[chave] = { 
-                        data: real.data, hora: "--:--", 
-                        reg: real.regional, ofi: real.oficina, 
+                    // Caso tenha sido realizada mas não conste na escala
+                    const ag = db.agendamentos.find(a => String(a.linha) === String(real.linhaAg));
+                    mapa["id_" + real.linhaAg] = { 
+                        data: ag ? ag.dataOficina : real.data, 
+                        hora: ag ? (ag.horaInicio || "--:--") : "--:--",
+                        reg: ag ? ag.regional : real.regional, 
+                        ofi: ag ? ag.oficina : real.oficina, 
                         esc: "", real: real.instrutores 
                     };
                 }
             });
 
-            // Ordena e exibe
-            Object.values(mapa)
-                .filter(i => (inicio === "" || i.data >= inicio) && (fim === "" || i.data <= fim))
-                .sort((a,b) => b.data.localeCompare(a.data))
-                .forEach(item => {
-                    let status = (item.esc === item.real && item.esc !== "") ? "✅ Tudo Certo" : "⚠️ Divergente";
-                    tbody.innerHTML += `<tr>
-                        <td>${item.data.split('-').reverse().join('/')}</td>
-                        <td>${item.hora}</td>
-                        <td>${item.reg}</td>
-                        <td>${item.ofi}</td>
-                        <td>${item.esc || "---"}</td>
-                        <td>${item.real || "---"}</td>
-                        <td class="${item.esc === item.real ? 'match' : 'mismatch'}">${status}</td>
-                    </tr>`;
-                });
+            const lista = Object.values(mapa).sort((a,b) => b.data.localeCompare(a.data));
+            
+            if (lista.length === 0) {
+                tbody.innerHTML = "<tr><td colspan='7' style='text-align:center;'>Nenhum dado encontrado.</td></tr>";
+                return;
+            }
+
+            lista.forEach(item => {
+                let status = "⚠️ Divergente";
+                let cor = "mismatch";
+                if (!item.esc && item.real) { status = "🚨 Realizada sem Escala"; cor = "mismatch"; }
+                else if (item.esc && !item.real) { status = "⏳ Pendente"; cor = "alerta"; }
+                else if (item.esc === item.real) { status = "✅ Tudo Certo"; cor = "match"; }
+
+                tbody.innerHTML += `<tr>
+                    <td>${item.data.split('-').reverse().join('/')}</td>
+                    <td>${item.hora}</td>
+                    <td>${item.reg}</td>
+                    <td>${item.ofi}</td>
+                    <td>${item.esc || "---"}</td>
+                    <td>${item.real || "---"}</td>
+                    <td class="${cor}">${status}</td>
+                </tr>`;
+            });
         }
     </script>
 </body>
