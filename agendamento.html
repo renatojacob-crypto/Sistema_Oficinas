@@ -180,6 +180,7 @@
             const dataRaw = document.getElementById("dataOficina").value; // Ex: 2026-05-05
             const [ano, mes, dia] = dataRaw.split('-');
             const payload = {
+                linhaAgendamento: document.getElementById("linhaAgendamento") ? document.getElementById("linhaAgendamento").value : "",
                 regional: document.getElementById("regional").value,
                 oficina: document.getElementById("oficina").value,
                 dataOficina: `${dia}/${mes}/${ano}`, // Garante que a planilha receba DD/MM/AAAA
