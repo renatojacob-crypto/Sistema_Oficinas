@@ -89,10 +89,12 @@
 
             const mapa = {};
 
-            // Processa Escala
+            // 1. Processa Escala e cria a base do mapa
             db.escala.forEach(esc => {
                 const ag = db.agendamentos.find(a => String(a.linha) === String(esc.linhaAg));
                 if (!ag) return;
+                
+                // Filtros aplicados à escala
                 if ((inicio && ag.dataOficina < inicio) || (fim && ag.dataOficina > fim)) return;
                 if (regFiltro !== "Todas" && ag.regional !== regFiltro) return;
                 if (ofiFiltro !== "Todas" && ag.oficina !== ofiFiltro) return;
@@ -104,16 +106,39 @@
                 };
             });
 
-            // Processa Realizadas (Cruzando pelo ID único da linha)
+            // 2. Processa Realizadas (CRÍTICO: Adiciona se não existir no mapa ou atualiza)
             db.realizadas.forEach(real => {
                 const chave = "id_" + real.linhaAg;
+                
+                // Se a realização não foi filtrada (precisamos buscar o agendamento para validar filtros)
+                const ag = db.agendamentos.find(a => String(a.linha) === String(real.linhaAg));
+                if (ag) {
+                    if ((inicio && ag.dataOficina < inicio) || (fim && ag.dataOficina > fim)) return;
+                    if (regFiltro !== "Todas" && ag.regional !== regFiltro) return;
+                    if (ofiFiltro !== "Todas" && ag.oficina !== ofiFiltro) return;
+                }
+
                 if (mapa[chave]) {
                     mapa[chave].real = real.instrutores;
+                } else {
+                    // Adiciona oficinas realizadas que não estavam na escala
+                    mapa["id_" + real.linhaAg] = { 
+                        data: ag ? ag.dataOficina : "Data Desconhecida", 
+                        hora: ag ? (ag.horaInicio || "--:--") : "--:--",
+                        reg: ag ? ag.regional : "N/A", 
+                        ofi: ag ? ag.oficina : "N/A", 
+                        esc: "", real: real.instrutores 
+                    };
                 }
             });
 
             const lista = Object.values(mapa).sort((a,b) => b.data.localeCompare(a.data));
             
+            if (lista.length === 0) {
+                tbody.innerHTML = "<tr><td colspan='7' style='text-align:center;'>Nenhum dado encontrado para os filtros selecionados.</td></tr>";
+                return;
+            }
+
             lista.forEach(item => {
                 let status = "⚠️ Divergente";
                 let cor = "mismatch";
@@ -122,7 +147,7 @@
                 else if (item.esc === item.real) { status = "✅ Tudo Certo"; cor = "match"; }
 
                 tbody.innerHTML += `<tr>
-                    <td>${item.data.split('-').reverse().join('/')}</td>
+                    <td>${item.data.includes('-') ? item.data.split('-').reverse().join('/') : item.data}</td>
                     <td>${item.hora}</td>
                     <td>${item.reg}</td>
                     <td>${item.ofi}</td>
