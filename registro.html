@@ -1,437 +1,118 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-PT">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registro de Oficinas</title>
+    <title>Registro Final de Oficina</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .readonly-field { background-color: #f3f4f6 !important; color: #4b5563 !important; font-weight: 600; border: 1px solid #d1d5db !important; }
-        .hidden { display: none !important; }
-        
-        .agendamentos-grid { 
-            display: grid; 
-            grid-template-columns: 1fr; 
-            gap: 12px; 
-            margin-top: 15px; 
-            max-height: 350px; 
-            overflow-y: auto;
-            padding-right: 5px;
-        }
-        
-        .agendamento-card {
-            background-color: var(--cor-fundo, #ffffff);
-            border: 2px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 15px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-align: left;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.02);
-        }
-
-        .agendamento-card:hover {
-            filter: brightness(0.96);
-            border-color: #9ca3af;
-        }
-
-        .agendamento-card.selecionado {
-            border-color: var(--primary-color) !important;
-            box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2) !important;
-            filter: brightness(0.92);
-        }
-
-        .info-titulo { color: var(--primary-color); font-weight: bold; font-size: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 5px; }
-
-        .status-box { padding: 20px; border-radius: 12px; margin-bottom: 20px; border: 2px solid #e5e7eb; background: #f9fafb; text-align: center;}
-        .radio-group { display: flex; justify-content: center; gap: 30px; margin-top: 15px; }
-        .radio-group label { display: flex; align-items: center; gap: 10px; font-weight: 700; font-size: 18px; cursor: pointer; padding: 10px 20px; border-radius: 8px; background: white; border: 1px solid #ddd; transition: 0.2s;}
-        .radio-group input { width: 22px; height: 22px; accent-color: var(--primary-color);}
-        
-        .checkbox-group { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-top: 10px; }
-        .checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; background: #fff; padding: 8px; border-radius: 6px; border: 1px solid #ddd; font-size: 14px;}
-        
-        .filtro-container { background: #f9fafb; padding: 15px; border-radius: 8px; border: 1px solid #e5e7eb; margin-top: 15px; margin-bottom: 5px; }
+        .agendamentos-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 15px; max-height: 300px; overflow-y: auto; }
+        .agendamento-card { background: white; border: 2px solid #e5e7eb; padding: 15px; border-radius: 8px; cursor: pointer; }
+        .agendamento-card.selecionado { border-color: var(--primary-color); background: #f0fdf4; }
+        .card-form { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 20px; display: none; }
     </style>
 </head>
 <body>
-
     <div class="container">
-        <header class="form-header">
-            <img src="imagens/logopreto.png" alt="Logomarca da Empresa" class="logo-empresa">
+        <header class="form-header" style="text-align: center;">
             <a href="siscontrol.html" style="text-decoration: none; color: var(--primary-color); font-size: 14px; font-weight: 600;">← Voltar ao Início</a>
-            <h1>Registro<br>de Oficina</h1>
+            <h1>Registro de Oficina</h1>
         </header>
 
-        <div id="status" class="loading">Sincronizando agendamentos pendentes...</div>
+        <div id="status" style="text-align: center; padding: 20px;">Carregando oficinas agendadas...</div>
 
-        <div id="areaSelecao">
-            <label style="font-weight: 700; font-size: 18px; color: var(--primary-color);">1. Selecione a Oficina para Registrar:</label>
-            
-            <div id="filtroBox" class="filtro-container hidden">
-                <label for="filtroRegional" style="font-size: 14px; font-weight: 600; color: #4b5563;">Filtrar lista por Regional:</label>
-                <select id="filtroRegional" onchange="filtrarCards()" style="width: 100%; padding: 10px; margin-top: 8px; border-radius: 6px; border: 1px solid #ccc;">
-                    <option value="Todas">Todas as Regionais</option>
-                </select>
+        <div id="conteudoPrincipal" style="display: none;">
+            <div class="card-form" style="display: block;">
+                <h3>1. Selecione a Oficina Realizada</h3>
+                <div class="agendamentos-grid" id="listaAgendamentos"></div>
             </div>
 
-            <div id="listaAgendamentos" class="agendamentos-grid"></div>
+            <form id="formRegistro" class="card-form">
+                <h3 id="tituloOficina">Preencher dados finais</h3>
+                <div class="form-group">
+                    <label>Status Final:</label>
+                    <select id="statusFinal" required>
+                        <option value="Realizada">Realizada</option>
+                        <option value="Cancelada (Medida)">Cancelada (Medida)</option>
+                    </select>
+                </div>
+                <div class="form-group"><label>Instrutores presentes:</label><input type="text" id="instrutores" required></div>
+                <div class="form-group"><label>Qtde Alunos:</label><input type="number" id="alunos" required></div>
+                <div class="form-group"><label>Fotos (Link Google Drive):</label><input type="text" id="fotos" placeholder="Cole o link da pasta aqui..."></div>
+                
+                <button type="submit" id="btnEnviar" class="btn-acao" style="width:100%;">Finalizar Registro</button>
+            </form>
         </div>
-
-        <form id="formOficina" class="hidden" style="margin-top: 30px; border-top: 2px dashed #ccc; padding-top: 25px;">
-            
-            <div id="dadosBase">
-                <div class="form-group">
-                    <label>Dados da Oficina Selecionada:</label>
-                    <input type="text" id="resumoOficina" class="readonly-field" readonly>
-                </div>
-
-                <input type="hidden" id="dataOficina">
-                <input type="hidden" id="local">
-                <input type="hidden" id="cidade">
-                <input type="hidden" id="oficina">
-                <input type="hidden" id="instituicao">
-
-                <div class="status-box">
-                    <label style="font-size: 18px; font-weight: 700; color: var(--primary-color);">2. Qual o Status final desta oficina?</label>
-                    <div class="radio-group">
-                        <label><input type="radio" name="statusOficina" value="Realizada" onchange="alternarStatus()" required> ✅ Realizada</label>
-                        <label><input type="radio" name="statusOficina" value="Cancelada" onchange="alternarStatus()"> ❌ Cancelada</label>
-                    </div>
-                </div>
-
-                <div id="blocoSubStatus" class="status-box hidden" style="border-color: #fca5a5; background: #fef2f2;">
-                    <label style="font-size: 18px; font-weight: 700; color: #dc2626;">3. Esta oficina será Medida/Cobrada mesmo cancelada?</label>
-                    <div class="radio-group">
-                        <label><input type="radio" name="medirOficina" value="Sim" onchange="alternarSubStatus()"> 📏 Sim, Medir Oficina</label>
-                        <label><input type="radio" name="medirOficina" value="Nao" onchange="alternarSubStatus()"> 🚫 Não Medir</label>
-                    </div>
-                </div>
-            </div>
-
-            <div id="blocoCancelada" class="hidden">
-                <div class="form-group">
-                    <label for="motivoCancelamento">Motivo do Cancelamento:</label>
-                    <textarea id="motivoCancelamento" rows="4" placeholder="Descreva o motivo do cancelamento..."></textarea>
-                </div>
-            </div>
-
-            <div id="blocoRealizada" class="hidden">
-                <div class="form-group">
-                    <label for="turno">Turno da Oficina:</label>
-                    <select id="turno"></select>
-                </div>
-                <div class="form-group">
-                    <label for="turma">Ano e Turma dos Alunos:</label>
-                    <select id="turma"></select>
-                </div>
-                <div class="form-group">
-                    <label for="segmento">Segmento Educacional:</label>
-                    <select id="segmento"></select>
-                </div>
-                <div class="form-group">
-                    <label for="acompanhantes">Nº de Professores/Coordenadores Acompanhantes:</label>
-                    <input type="number" id="acompanhantes" min="0" placeholder="Ex: 2">
-                </div>
-                <div class="form-group">
-                    <label>Instrutores Presentes:</label>
-                    <div id="instrutoresContainer" class="checkbox-group"></div>
-                </div>
-                <div class="form-group">
-                    <label for="alunos">Quantidade total de Alunos:</label>
-                    <input type="number" id="alunos" min="1" placeholder="Ex: 30">
-                </div>
-                <div class="form-group">
-                    <label for="fotos">Fotos da Execução (Máximo 10):</label>
-                    <input type="file" id="fotos" multiple accept="image/*" onchange="converterFotos(this)">
-                </div>
-            </div>
-
-            <button type="submit" id="btnEnviar" class="hidden" style="width: 100%; height: 60px; font-size: 18px;">Salvar Registro</button>
-        </form>
     </div>
 
+    <script src="auth.js"></script>
     <script>
-        if (sessionStorage.getItem("logado") !== "sim") {
-            window.location.href = "index.html"; 
-        }
+        verificarLogin();
     </script>
-
     <script src="config.js"></script>
-
     <script>
-        let dadosGlobais = {};
-        let agendamentosGlobais = []; 
-        let fotosBase64 = [];
-        let linhaAgendamentoAtual = null;
-
-        function obterCorRegional(regional) {
-            if (!regional) return "#ffffff";
-            const reg = regional.toLowerCase();
-            if (reg.includes("itabira")) return "#dcfce7"; 
-            if (reg.includes("governador") || reg.includes("valadares") || reg.includes("gov.")) return "#dbeafe"; 
-            if (reg.includes("vitória") || reg.includes("vitoria")) return "#fef9c3"; 
-            return "#ffffff"; 
-        }
+        let agendamentoSelecionado = null;
 
         window.onload = () => {
             fetch(URL_GAS)
                 .then(res => res.json())
                 .then(data => {
-                    dadosGlobais = data;
-                    agendamentosGlobais = data.agendamentos || [];
-                    
-                    const containerAgendamentos = document.getElementById("listaAgendamentos");
-                    containerAgendamentos.innerHTML = "";
-                    
-                    if (agendamentosGlobais.length > 0) {
-                        popularFiltroRegionais();
-                        renderizarCards("Todas"); 
-                    } else {
-                        containerAgendamentos.innerHTML = `<p style="text-align:center; padding:20px; color:green; font-weight:bold;">🎉 Não há oficinas pendentes de registro!</p>`;
-                    }
-                    
-                    popularSelect("turno", data.turnos);
-                    popularSelect("turma", data.turmas);
-                    popularSelect("segmento", data.segmentos);
-
+                    const container = document.getElementById("listaAgendamentos");
+                    (data.agendamentos || []).filter(a => a.status === "Agendada").forEach(ag => {
+                        const div = document.createElement("div");
+                        div.className = "agendamento-card";
+                        div.onclick = () => {
+                            agendamentoSelecionado = ag;
+                            document.querySelectorAll(".agendamento-card").forEach(el => el.classList.remove("selecionado"));
+                            div.classList.add("selecionado");
+                            document.getElementById("tituloOficina").innerText = `Registro: ${ag.oficina} (${ag.inst})`;
+                            document.getElementById("formRegistro").style.display = "block";
+                        };
+                        div.innerHTML = `<strong>${ag.data}</strong> | ${ag.oficina} <br><small>${ag.inst}</small>`;
+                        container.appendChild(div);
+                    });
                     document.getElementById("status").style.display = "none";
-                })
-                .catch(err => {
-                    document.getElementById("status").innerText = "Erro de conexão com o servidor.";
-                    document.getElementById("status").style.color = "#dc2626";
+                    document.getElementById("conteudoPrincipal").style.display = "block";
                 });
         };
 
-        function popularFiltroRegionais() {
-            const regionaisUnicas = [...new Set(agendamentosGlobais.map(ag => ag.regional))].filter(Boolean).sort();
-            const select = document.getElementById("filtroRegional");
-            
-            regionaisUnicas.forEach(reg => {
-                select.innerHTML += `<option value="${reg}">${reg}</option>`;
-            });
-            
-            document.getElementById("filtroBox").classList.remove("hidden");
-        }
-
-        function filtrarCards() {
-            const regionalSelecionada = document.getElementById("filtroRegional").value;
-            renderizarCards(regionalSelecionada);
-        }
-
-        function renderizarCards(filtroRegional) {
-            const containerAgendamentos = document.getElementById("listaAgendamentos");
-            containerAgendamentos.innerHTML = "";
-            
-            document.getElementById("formOficina").classList.add("hidden");
-            linhaAgendamentoAtual = null;
-
-            const listaFiltrada = filtroRegional === "Todas" 
-                ? agendamentosGlobais 
-                : agendamentosGlobais.filter(ag => ag.regional === filtroRegional);
-
-            if (listaFiltrada.length === 0) {
-                containerAgendamentos.innerHTML = `<p style="color: #6b7280; text-align: center; padding: 15px;">Nenhuma oficina pendente para esta regional.</p>`;
-                return;
-            }
-
-            listaFiltrada.forEach(ag => {
-                const horario = ag.horaInicio ? ag.horaInicio : "--:--";
-                const card = document.createElement("div");
-                card.className = "agendamento-card";
-                card.setAttribute('data-linha', ag.linha);
-                card.style.setProperty('--cor-fundo', obterCorRegional(ag.regional));
-                card.onclick = () => preencherDadosAgendamento(ag.linha, card);
-                
-                card.innerHTML = `
-                    <div class="info-titulo">📅 ${ag.dataOficina} às ${horario} - ${ag.oficina}</div>
-                    <div style="font-size: 14px; color: #1f2937;"><strong>Instituição:</strong> ${ag.instituicao}</div>
-                    <div style="font-size: 13px; color: #4b5563;"><strong>Cidade:</strong> ${ag.cidade} | <strong>Regional:</strong> ${ag.regional}</div>
-                `;
-                containerAgendamentos.appendChild(card);
-            });
-        }
-
-        function popularSelect(id, array) {
-            const select = document.getElementById(id);
-            select.innerHTML = '<option value="">Selecione...</option>';
-            array.forEach(item => {
-                select.innerHTML += `<option value="${item}">${item}</option>`;
-            });
-        }
-
-        function preencherDadosAgendamento(linha, elemento) {
-            linhaAgendamentoAtual = linha;
-            
-            document.querySelectorAll(".agendamento-card").forEach(c => c.classList.remove("selecionado"));
-            elemento.classList.add("selecionado");
-
-            const ag = agendamentosGlobais.find(a => a.linha == linha);
-            if (!ag) {
-                console.error("Agendamento não encontrado para a linha: " + linha);
-                return;
-            }
-            const horario = ag.horaInicio ? ag.horaInicio : "--:--";
-
-            document.getElementById("resumoOficina").value = `${ag.dataOficina} | ${ag.oficina} - ${ag.instituicao}`;
-            document.getElementById("dataOficina").value = ag.dataOficina;
-            document.getElementById("local").value = ag.regional;
-            document.getElementById("cidade").value = ag.cidade;
-            document.getElementById("oficina").value = ag.oficina;
-            document.getElementById("instituicao").value = ag.instituicao;
-
-            carregarInstrutores(ag.regional);
-
-            document.getElementById("formOficina").classList.remove("hidden");
-            
-            // Reseta as opções quando troca de card
-            document.querySelectorAll('input[name="statusOficina"]').forEach(r => r.checked = false);
-            document.querySelectorAll('input[name="medirOficina"]').forEach(r => r.checked = false);
-            alternarStatus();
-
-            document.getElementById("formOficina").scrollIntoView({ behavior: 'smooth' });
-        }
-
-        function carregarInstrutores(regional) {
-            const container = document.getElementById("instrutoresContainer");
-            container.innerHTML = ""; 
-            
-            const instrutoresFiltrados = dadosGlobais.instrutoresData
-                .filter(r => {
-                    const regInstrutor = r[3] || "";
-                    return regInstrutor === regional || (regional.includes("Governador") && regInstrutor.includes("Gov."));
-                })
-                .map(r => r[1]);
-                
-            instrutoresFiltrados.forEach(instrutor => {
-                const label = document.createElement("label");
-                label.className = "checkbox-label";
-                label.innerHTML = `<input type="checkbox" name="instrutorCheck" value="${instrutor}"> ${instrutor}`;
-                container.appendChild(label);
-            });
-        }
-
-        // NOVO: Lógica de controle do primeiro nível (Realizada vs Cancelada)
-        function alternarStatus() {
-            const status = document.querySelector('input[name="statusOficina"]:checked')?.value;
-            const blocoSubStatus = document.getElementById("blocoSubStatus");
-            const blocoRealizada = document.getElementById("blocoRealizada");
-            const blocoCancelada = document.getElementById("blocoCancelada");
-            const btnEnviar = document.getElementById("btnEnviar");
-
-            if (status === "Realizada") {
-                blocoSubStatus.classList.add("hidden");
-                blocoRealizada.classList.remove("hidden");
-                blocoCancelada.classList.add("hidden");
-                btnEnviar.classList.remove("hidden");
-                btnEnviar.innerText = "Salvar Registro e Fotos";
-                
-                // Limpa a sub-pergunta
-                document.querySelectorAll('input[name="medirOficina"]').forEach(r => r.checked = false);
-            } else if (status === "Cancelada") {
-                blocoSubStatus.classList.remove("hidden");
-                blocoRealizada.classList.add("hidden");
-                blocoCancelada.classList.add("hidden");
-                btnEnviar.classList.add("hidden"); // Esconde até responder a sub-pergunta
-            } else {
-                blocoSubStatus.classList.add("hidden");
-                blocoRealizada.classList.add("hidden");
-                blocoCancelada.classList.add("hidden");
-                btnEnviar.classList.add("hidden");
-            }
-        }
-
-        // NOVO: Lógica de controle do segundo nível (Medir vs Não Medir)
-        function alternarSubStatus() {
-            const medir = document.querySelector('input[name="medirOficina"]:checked')?.value;
-            const blocoRealizada = document.getElementById("blocoRealizada");
-            const blocoCancelada = document.getElementById("blocoCancelada");
-            const btnEnviar = document.getElementById("btnEnviar");
-
-            if (medir === "Sim") {
-                blocoRealizada.classList.remove("hidden");
-                blocoCancelada.classList.remove("hidden"); // Mantém a caixa de motivo ativa
-                btnEnviar.classList.remove("hidden");
-                btnEnviar.innerText = "Salvar Registro (Cancelada e Medida)";
-            } else if (medir === "Nao") {
-                blocoRealizada.classList.add("hidden");
-                blocoCancelada.classList.remove("hidden");
-                btnEnviar.classList.remove("hidden");
-                btnEnviar.innerText = "Registrar Cancelamento";
-            }
-        }
-
-        function converterFotos(input) {
-            fotosBase64 = [];
-            if (input.files.length > 10) { alert("Limite excedido: no máximo 10 fotos."); input.value = ""; return; }
-            
-            Array.from(input.files).forEach(file => {
-                const reader = new FileReader();
-                reader.onload = (e) => {
-                    fotosBase64.push({ name: file.name, mimeType: file.type, base64: e.target.result.split(',')[1] });
-                };
-                reader.readAsDataURL(file);
-            });
-        }
-
-        document.getElementById("formOficina").onsubmit = (e) => {
+        document.getElementById("formRegistro").onsubmit = (e) => {
             e.preventDefault();
             const btn = document.getElementById("btnEnviar");
-            const statusPrincipal = document.querySelector('input[name="statusOficina"]:checked').value;
-            const medir = document.querySelector('input[name="medirOficina"]:checked')?.value;
-
-            // Define o Status final que irá para o Banco de Dados
-            let statusEnvio = statusPrincipal;
-            if (statusPrincipal === "Cancelada" && medir === "Sim") {
-                statusEnvio = "Cancelada (Medida)";
-            }
-
-            let instrutoresSelecionados = "";
-            if (statusPrincipal === "Realizada" || statusEnvio === "Cancelada (Medida)") {
-                const checkboxes = document.querySelectorAll('input[name="instrutorCheck"]:checked');
-                if (checkboxes.length === 0) {
-                    alert("Por favor, selecione os instrutores presentes.");
-                    return; 
-                }
-                instrutoresSelecionados = Array.from(checkboxes).map(cb => cb.value).join(", ");
-            }
-
-            btn.innerText = "Sincronizando com Banco de Dados...";
+            btn.innerText = "Processando...";
             btn.disabled = true;
 
             const payload = {
-                linhaAgendamento: linhaAgendamentoAtual,
-                status: status,
-                motivoCancelamento: document.getElementById("motivoCancelamento").value,
-                dataDaOficina: document.getElementById("dataOficina").value,
-                local: document.getElementById("local").value,
-                cidade: document.getElementById("cidade").value,
-                oficina: document.getElementById("oficina").value,
-                instituicao: document.getElementById("instituicao").value,
-                turno: document.getElementById("turno").value,
-                turma: document.getElementById("turma").value,
-                segmento: document.getElementById("segmento").value,
-                acompanhantes: document.getElementById("acompanhantes").value,
-                instrutores: instrutoresSelecionados,
+                acao: "salvarRealizada", // Roteador no Código.gs
+                idAgendamento: agendamentoSelecionado.id,
+                status: document.getElementById("statusFinal").value,
+                regional: agendamentoSelecionado.regional,
+                oficina: agendamentoSelecionado.oficina,
+                dataOficina: agendamentoSelecionado.data,
+                cidade: agendamentoSelecionado.cidade,
+                instituicao: agendamentoSelecionado.inst,
+                instrutores: document.getElementById("instrutores").value,
                 alunos: document.getElementById("alunos").value,
-                fotos: fotosBase64
+                fotosUrl: document.getElementById("fotos").value
             };
 
             fetch(URL_GAS, {
                 method: "POST",
-                mode: "no-cors",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify(payload)
             })
-            .then(() => {
-                alert("Registro finalizado com sucesso!");
-                location.reload(); 
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === "sucesso") {
+                    alert("Registro finalizado com sucesso!");
+                    location.reload();
+                } else {
+                    alert("Erro: " + data.msg);
+                    btn.disabled = false;
+                }
             })
             .catch(err => {
-                alert("Erro ao salvar. Verifique sua conexão.");
-                btn.innerText = "Tentar Novamente";
+                alert("Falha de conexão: " + err);
                 btn.disabled = false;
             });
         };
