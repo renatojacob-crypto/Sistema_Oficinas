@@ -338,27 +338,21 @@
         function desenharGrafico(labels, realizadas, canceladas) {
             const ctx = document.getElementById('chartRegional').getContext('2d');
             
-            if (myChart) myChart.destroy();
+            // A chave está aqui: destruir o gráfico anterior ANTES de criar um novo
+            if (window.myChart instanceof Chart) {
+                window.myChart.destroy();
+            }
             
-            myChart = new Chart(ctx, {
+            window.myChart = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: labels,
                     datasets: [
-                        { label: 'Realizadas', data: realizadas, backgroundColor: '#10b981', borderRadius: 4 },
-                        { label: 'Canceladas', data: canceladas, backgroundColor: '#ef4444', borderRadius: 4 }
+                        { label: 'Realizadas', data: realizadas, backgroundColor: '#10b981' },
+                        { label: 'Canceladas', data: canceladas, backgroundColor: '#ef4444' }
                     ]
                 },
-                options: { 
-                    responsive: true, 
-                    maintainAspectRatio: false,
-                    plugins: { 
-                        legend: { position: 'bottom' } 
-                    },
-                    scales: {
-                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
-                    }
-                }
+                options: { responsive: true, maintainAspectRatio: false }
             });
         }
     </script>
