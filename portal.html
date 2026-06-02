@@ -58,21 +58,12 @@
                 🏦 Materiais Gerais das Oficinas
             </a>
         </div>
-
-        <a onclick="sair()" class="logout">🚪 Sair do Sistema</a>
+        <button onclick="sair()"> 🚪Sair do Sistema</button>
     </div>
 
+    <script src="auth.js"></script>
     <script>
-        // Verifica se está logado para ver o portal
-        if (sessionStorage.getItem("logado") !== "sim") {
-            window.location.href = "index.html";
-        }
-
-        // Função de logoff
-        function sair() {
-            sessionStorage.removeItem("logado");
-            window.location.href = "index.html";
-        }
+        verificarLogin();
     </script>
 </body>
 </html>

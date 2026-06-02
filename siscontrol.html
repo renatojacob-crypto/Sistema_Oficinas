@@ -108,18 +108,9 @@
     </div>
 
     <!-- NOVO: Script de Segurança -->
+    <script src="auth.js"></script>
     <script>
-        // 1. Verifica se o usuário tem a chave "logado" salva no navegador
-        if (sessionStorage.getItem("logado") !== "sim") {
-            // Se não tiver, chuta de volta para a tela de login
-            window.location.href = "index.html"; 
-        }
-
-        // 2. Função acionada ao clicar no botão "Sair"
-        function sair() {
-            sessionStorage.removeItem("logado"); // Destrói o crachá
-            window.location.href = "index.html"; // Volta pro login
-        }
+        verificarLogin();
     </script>
 </body>
 </html>

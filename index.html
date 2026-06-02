@@ -52,39 +52,28 @@
 
     <script src="config.js"></script>
     <script>
-        document.getElementById("formLogin").onsubmit = function(e) {
+        document.getElementById("formLogin").addEventListener("submit", function(e) {
             e.preventDefault();
-            
-            const btn = document.getElementById("btnEntrar");
-            const erro = document.getElementById("msgErro");
-            const carregando = document.getElementById("msgCarregando");
-            const u = document.getElementById("usuario").value;
-            const s = document.getElementById("senha").value;
 
-            btn.disabled = true;
-            erro.style.display = "none";
-            carregando.style.display = "block";
+            const usuario = document.getElementById("usuario").value.trim();
+            const senha = document.getElementById("senha").value.trim();
 
-            // Envia os dados para a planilha verificar
-            fetch(`${URL_GAS}?acao=login&usuario=${encodeURIComponent(u)}&senha=${encodeURIComponent(s)}`)
+            fetch(`${URL_GAS}?acao=login&usuario=${encodeURIComponent(usuario)}&senha=${encodeURIComponent(senha)}`)
                 .then(res => res.json())
                 .then(data => {
                     if (data.sucesso === true) {
-                        // Salva o "crachá" na sessão do navegador
-                        sessionStorage.setItem("logado", "sim");
-                        window.location.href = "portal.html"; // Redireciona
+                        localStorage.setItem("usuarioLogado", usuario);
+                        localStorage.setItem("sessaoAtiva", "sim");
+
+                        window.location.href = "portal.html";
                     } else {
-                        erro.style.display = "block";
-                        btn.disabled = false;
-                        carregando.style.display = "none";
+                        alert("Usuário ou senha inválidos.");
                     }
                 })
                 .catch(err => {
-                    alert("Erro ao conectar com o servidor.");
-                    btn.disabled = false;
-                    carregando.style.display = "none";
+                    alert("Erro de comunicação com o servidor: " + err);
                 });
-        };
+        });
     </script>
 </body>
 </html>
