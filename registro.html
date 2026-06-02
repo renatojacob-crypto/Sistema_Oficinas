@@ -203,6 +203,10 @@
                 lista.forEach(ag => {
                     const div = document.createElement("div");
                     div.className = "agendamento-card";
+                    
+                    // APLICA A COR AQUI TAMBÉM
+                    div.style.borderLeft = `6px solid ${obterCorRegional(ag.regional)}`;
+
                     div.onclick = () => selecionarAgendamento(div, ag);
                     
                     div.innerHTML = `
