@@ -8,19 +8,18 @@
     <style>
         .container { max-width: 900px; margin: 0 auto; padding: 20px; }
         .card-branco { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 20px; }
-        .agendamentos-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 15px; max-height: 400px; overflow-y: auto; padding-right: 5px; }
+        
+        .filtros-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        @media (max-width: 600px) { .filtros-grid { grid-template-columns: 1fr; } }
+        .form-group label { font-size: 13px; font-weight: 600; color: #4b5563; margin-bottom: 5px; display: block; }
+        .form-group select { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+
+        .agendamentos-grid { display: grid; grid-template-columns: 1fr; gap: 12px; max-height: 400px; overflow-y: auto; padding-right: 5px; }
 
         .agendamento-card {
-            background-color: white;
-            border: 2px solid #e5e7eb;
-            border-radius: 8px;
-            padding: 15px;
-            cursor: pointer;
-            transition: all 0.2s ease;
-            text-align: left;
-            display: flex;
-            flex-direction: column;
-            gap: 5px;
+            background-color: white; border: 2px solid #e5e7eb; border-radius: 8px;
+            padding: 15px; cursor: pointer; transition: all 0.2s ease;
+            text-align: left; display: flex; flex-direction: column; gap: 5px;
         }
         .agendamento-card:hover { filter: brightness(0.96); border-color: #9ca3af; }
         .agendamento-card.selecionado { border-color: var(--primary-color) !important; background-color: #f0fdf4; }
@@ -37,7 +36,6 @@
         
         .badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; background: #dbeafe; color: #1e40af;}
         
-        /* Custom scrollbar para a lista de oficinas */
         .agendamentos-grid::-webkit-scrollbar { width: 6px; }
         .agendamentos-grid::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
         .agendamentos-grid::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
@@ -51,20 +49,32 @@
             <p style="color: #6b7280; font-size: 14px; margin-top: 5px;">Atribua a equipa de instrutores às oficinas pendentes</p>
         </header>
 
-        <div class="filtros-grid" style="margin-bottom:20px;">
-            <select id="fRegional" onchange="aplicarFiltros()"><option value="Todas">Todas Regionais</option></select>
-            <select id="fOficina" onchange="aplicarFiltros()"><option value="Todas">Todas Oficinas</option></select>
-        </div>
         <div id="status" style="text-align: center; font-weight: bold; padding: 20px; color: #4b5563;">A carregar oficinas disponíveis...</div>
 
         <div id="conteudoPrincipal" style="display: none;">
             
             <div class="card-branco">
                 <h2 style="font-size: 16px; margin-top: 0; color: #374151;">1. Selecione a Oficina Pendente</h2>
+                
+                <div class="filtros-grid">
+                    <div class="form-group">
+                        <label>Filtrar por Regional:</label>
+                        <select id="fRegional" onchange="aplicarFiltros()">
+                            <option value="Todas">Todas Regionais</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Filtrar por Oficina:</label>
+                        <select id="fOficina" onchange="aplicarFiltros()">
+                            <option value="Todas">Todas Oficinas</option>
+                        </select>
+                    </div>
+                </div>
+
                 <div class="agendamentos-grid" id="listaAgendamentos">
                     </div>
                 <div id="msgVazio" style="display:none; text-align:center; padding: 30px; color: #6b7280; font-style: italic;">
-                    Todas as oficinas agendadas já possuem escala, ou não há agendamentos futuros.
+                    Não há oficinas agendadas para os filtros selecionados.
                 </div>
             </div>
 
@@ -80,65 +90,97 @@
         </div>
     </div>
 
-    <script src="auth.js"></script>
-    <script>
-        verificarLogin();
-    </script>
     <script src="config.js"></script>
     <script>
         let dadosGlobais = {};
+        let pendentesGlobais = [];
         let agendamentoSelecionadoId = null;
 
         window.onload = () => {
             fetch(URL_GAS)
-                .then(res => {
-                    if (!res.ok) throw new Error("Erro na ligação ao servidor: " + res.status);
-                    return res.json();
-                })
+                .then(res => res.json())
                 .then(data => {
                     if (data.status === "erro" || data.erro) throw new Error(data.msg || data.erro);
 
                     dadosGlobais = data;
 
-                    // Filtra apenas agendamentos que estão com status "Agendada"
-                    const pendentes = (data.agendamentos || []).filter(a => a.status === "Agendada");
+                    // 1. Guarda apenas as oficinas pendentes
+                    pendentesGlobais = (data.agendamentos || []).filter(a => a.status === "Agendada");
 
-                    const containerAg = document.getElementById("listaAgendamentos");
-                    containerAg.innerHTML = "";
+                    // 2. Extrai Regionais e Oficinas para os filtros
+                    const regionais = new Set();
+                    const oficinas = new Set();
 
-                    if (pendentes.length === 0) {
-                        document.getElementById("msgVazio").style.display = "block";
-                    } else {
-                        // Ordena para mostrar as datas mais próximas primeiro
-                        pendentes.sort((a, b) => a.data.localeCompare(b.data));
+                    pendentesGlobais.forEach(ag => {
+                        if (ag.regional) regionais.add(ag.regional);
+                        if (ag.oficina) oficinas.add(ag.oficina);
+                    });
 
-                        pendentes.forEach(ag => {
-                            const dataFormatada = formatarDataBR(ag.data);
+                    // 3. Popula os Selects de Filtro
+                    const selReg = document.getElementById("fRegional");
+                    [...regionais].sort().forEach(r => selReg.innerHTML += `<option value="${r}">${r}</option>`);
 
-                            const div = document.createElement("div");
-                            div.className = "agendamento-card";
-                            div.onclick = () => selecionarAgendamento(div, ag.id);
-                            div.innerHTML = `
-                                <div style="display:flex; justify-content: space-between; align-items: center;">
-                                    <strong style="color: var(--primary-color);">${dataFormatada} às ${ag.inicio ? ag.inicio.substring(0,5) : "--:--"}</strong>
-                                    <span class="badge">ID: ${ag.id}</span>
-                                </div>
-                                <div style="font-weight: 600; color: #374151; font-size: 15px;">${ag.oficina}</div>
-                                <div style="font-size: 13px; color: #6b7280; margin-top: 3px;">🏢 ${ag.inst} | 📍 ${ag.cidade} (${ag.regional})</div>
-                            `;
-                            containerAg.appendChild(div);
-                        });
-                    }
+                    const selOfi = document.getElementById("fOficina");
+                    [...oficinas].sort().forEach(o => selOfi.innerHTML += `<option value="${o}">${o}</option>`);
 
                     document.getElementById("status").style.display = "none";
                     document.getElementById("conteudoPrincipal").style.display = "block";
+
+                    // 4. Renderiza a lista pela primeira vez
+                    renderizarLista(pendentesGlobais);
                 })
                 .catch(err => {
                     document.getElementById("status").innerText = "Erro ao carregar dados: " + err.message;
                     document.getElementById("status").style.color = "#dc2626";
-                    console.error(err);
                 });
         };
+
+        // Função que é ativada sempre que o utilizador muda um filtro
+        function aplicarFiltros() {
+            const reg = document.getElementById("fRegional").value;
+            const ofi = document.getElementById("fOficina").value;
+
+            const filtrados = pendentesGlobais.filter(ag => {
+                const matchReg = (reg === "Todas" || ag.regional === reg);
+                const matchOfi = (ofi === "Todas" || ag.oficina === ofi);
+                return matchReg && matchOfi;
+            });
+
+            renderizarLista(filtrados);
+            document.getElementById("corpoEscala").style.display = "none"; // Esconde a aba de escala se mudar o filtro
+        }
+
+        // Função responsável por desenhar as oficinas na tela
+        function renderizarLista(lista) {
+            const container = document.getElementById("listaAgendamentos");
+            container.innerHTML = "";
+
+            if (lista.length === 0) {
+                document.getElementById("msgVazio").style.display = "block";
+            } else {
+                document.getElementById("msgVazio").style.display = "none";
+                
+                // Ordena por data
+                lista.sort((a, b) => a.data.localeCompare(b.data));
+
+                lista.forEach(ag => {
+                    const dataFormatada = formatarDataBR(ag.data);
+
+                    const div = document.createElement("div");
+                    div.className = "agendamento-card";
+                    div.onclick = () => selecionarAgendamento(div, ag.id);
+                    div.innerHTML = `
+                        <div style="display:flex; justify-content: space-between; align-items: center;">
+                            <strong style="color: var(--primary-color);">${dataFormatada} às ${ag.inicio ? ag.inicio.substring(0,5) : "--:--"}</strong>
+                            <span class="badge">ID: ${ag.id}</span>
+                        </div>
+                        <div style="font-weight: 600; color: #374151; font-size: 15px;">${ag.oficina}</div>
+                        <div style="font-size: 13px; color: #6b7280; margin-top: 3px;">🏢 ${ag.inst} | 📍 ${ag.cidade} (${ag.regional})</div>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+        }
 
         function formatarDataBR(dataStr) {
             if (!dataStr) return "";
@@ -150,34 +192,18 @@
             return dataStr;
         }
 
-        function aplicarFiltros() {
-            const reg = document.getElementById("fRegional").value;
-            const ofi = document.getElementById("fOficina").value;
-
-            const listaFiltrada = agendamentosGlobais.filter(ag => {
-                const matchReg = (reg === "Todas" || ag.regional === reg);
-                const matchOfi = (ofi === "Todas" || ag.oficina === ofi);
-                return matchReg && matchOfi;
-            });
-
-            renderizarLista(listaFiltrada); // Sua função que monta os cartões na tela
-        }
         function selecionarAgendamento(elemento, id) {
             agendamentoSelecionadoId = id;
             
-            // Remove o destaque dos outros cartões e aplica no selecionado
             document.querySelectorAll(".agendamento-card").forEach(el => el.classList.remove("selecionado"));
             elemento.classList.add("selecionado");
 
-            // Localiza os dados completos do agendamento
-            const ag = dadosGlobais.agendamentos.find(a => a.id === id);
+            const ag = pendentesGlobais.find(a => a.id === id);
             document.getElementById("txtReg").innerText = ag.regional;
 
-            // Filtra e Popula a lista de Instrutores (Baseado na Regional da Oficina)
             const containerInst = document.getElementById("listaInstrutores");
             containerInst.innerHTML = "";
 
-            // O Array Instrutores tem a estrutura: [ID, Nome, Função, Regional]
             const instrutoresDaRegional = (dadosGlobais.instrutores || []).filter(i => 
                 i[3] === ag.regional || (ag.regional && i[3] && ag.regional.includes(i[3].replace("Gov.", "Governador")))
             );
@@ -194,30 +220,26 @@
             }
 
             document.getElementById("corpoEscala").style.display = "block";
-            
-            // Faz um "scroll" automático para a área de selecionar os nomes
             document.getElementById("corpoEscala").scrollIntoView({ behavior: "smooth", block: "nearest" });
         }
 
-        // Função de envio de dados para o Servidor
         document.getElementById("formEscala").onsubmit = (e) => {
             e.preventDefault();
             
             const selecionados = Array.from(document.querySelectorAll('input[name="inst"]:checked')).map(c => c.value).join(", ");
-            
             if (!selecionados) {
                 alert("Por favor, selecione pelo menos um instrutor para salvar a escala.");
                 return;
             }
 
-            const ag = dadosGlobais.agendamentos.find(a => a.id === agendamentoSelecionadoId);
+            const ag = pendentesGlobais.find(a => a.id === agendamentoSelecionadoId);
             const btn = document.getElementById("btnEnviar");
             
             btn.innerText = "A guardar...";
             btn.disabled = true;
 
             const payload = {
-                acao: "salvarEscala", // Comando essencial para o "Roteador" do Google Apps Script
+                acao: "salvarEscala",
                 idAgendamento: ag.id,
                 dataOficina: formatarDataBR(ag.data),
                 regional: ag.regional,
@@ -228,13 +250,10 @@
 
             fetch(URL_GAS, {
                 method: "POST",
-                headers: { "Content-Type": "text/plain;charset=utf-8" }, // Contorna bloqueios de CORS
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify(payload)
             })
-            .then(res => {
-                if (!res.ok) throw new Error("Erro HTTP: " + res.status);
-                return res.json();
-            })
+            .then(res => res.json())
             .then(data => {
                 if(data.status === "sucesso") {
                     alert("Escala guardada com sucesso no banco de dados!");
@@ -247,7 +266,6 @@
             })
             .catch(err => {
                 alert("Falha de ligação com o servidor: " + err.message);
-                console.error(err);
                 btn.innerText = "Salvar Escala Definitiva";
                 btn.disabled = false;
             });
