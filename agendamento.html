@@ -92,9 +92,9 @@
         // 1. Verifica se o usuário tem a chave "logado" salva no navegador
         let dadosGlobais = {};
         console.log("URL_GAS carregada:", URL_GAS);
-        
+
         window.onload = () => {
-            fetch(URL_GAS)
+            fetch(URL_GAS + "?acao=dados&cache=" + new Date().getTime())
                 .then(res => res.json())
                 .then(data => {
                     dadosGlobais = data;
