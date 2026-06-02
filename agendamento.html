@@ -94,44 +94,57 @@
         console.log("URL_GAS carregada:", URL_GAS);
 
         window.onload = () => {
-            fetch(URL_GAS + "?acao=dados&cache=" + new Date().getTime())
-                .then(r => r.text())
-                .then(t => console.log("RESPOSTA BRUTA DO SERVIDOR:", t))
-                .catch(e => console.error("ERRO NO FETCH:", e))
-                .then(res => res.json())
-                .then(data => {
+            fetch(URL_GAS + "?acao=dadosAgendamento&cache=" + new Date().getTime())
+                .then(res => res.text())
+                .then(texto => {
+                    console.log("Resposta bruta:", texto);
+
+                    let data;
+
+                    try {
+                        data = JSON.parse(texto);
+                    } catch (erroJson) {
+                        throw new Error("O servidor não retornou JSON válido.");
+                    }
+
+                    if (data.status !== "sucesso") {
+                        throw new Error(data.msg || "Servidor retornou erro.");
+                    }
+
+                    if (!Array.isArray(data.locais)) {
+                        throw new Error("Servidor não retornou a lista de locais.");
+                    }
+
+                    if (!Array.isArray(data.oficinas)) {
+                        throw new Error("Servidor não retornou a lista de oficinas.");
+                    }
+
                     dadosGlobais = data;
-                    
+
                     const regionaisUnicas = [...new Set(data.locais.map(r => r[1]))];
                     popularSelect("regional", regionaisUnicas);
                     popularSelect("oficina", data.oficinas);
-                    
-                    // --- CORREÇÃO DO AUTOCOMPLETAR AQUI ---
+
                     const datalist = document.getElementById("listaInstituicoes");
-                    datalist.innerHTML = ""; // Limpa a lista antes de popular
-                    
-                    // Tenta puxar a lista de instituições varrendo os agendamentos já existentes
+                    datalist.innerHTML = "";
+
                     if (data.agendamentos && data.agendamentos.length > 0) {
-                        const escolasUnicas = [...new Set(data.agendamentos.map(ag => ag.instituicao))].filter(Boolean).sort();
-                        escolasUnicas.forEach(inst => {
-                            datalist.innerHTML += `<option value="${inst}">`;
-                        });
-                    } 
-                    // Caso o seu backend envie as instituições separadas
-                    else if (data.instituicoes && data.instituicoes.length > 0) {
-                        const escolasUnicas = [...new Set(data.instituicoes)].filter(Boolean).sort();
+                        const escolasUnicas = [...new Set(data.agendamentos.map(ag => ag.instituicao))]
+                            .filter(Boolean)
+                            .sort();
+
                         escolasUnicas.forEach(inst => {
                             datalist.innerHTML += `<option value="${inst}">`;
                         });
                     }
-                    // ----------------------------------------
 
                     document.getElementById("status").style.display = "none";
                     document.getElementById("formAgendamento").style.display = "block";
                 })
                 .catch(err => {
-                    document.getElementById("status").innerText = "Erro de conexão com o banco de dados.";
+                    document.getElementById("status").innerText = "Erro de conexão com o banco de dados: " + err.message;
                     document.getElementById("status").style.color = "#dc2626";
+                    console.error("Erro completo:", err);
                 });
         };
 
