@@ -86,6 +86,10 @@
     <script src="config.js"></script>
 
     <script>
+        if (!localStorage.getItem("usuarioLogado")) {
+            window.location.href = "login.html";
+        }
+
         let dadosGlobais = {};
 
         window.onload = () => {
@@ -188,8 +192,23 @@
 
             fetch(URL_GAS, {
                 method: "POST",
-                headers: { "Content-Type": "application/json" }, // O padrão correto para JSON
-                body: JSON.stringify(payload)
+                headers: {
+                    "Content-Type": "text/plain;charset=utf-8"
+                },
+                body: JSON.stringify({
+                    action: "salvarAgendamento",
+                    regional: document.getElementById("regional").value,
+                    oficina: document.getElementById("oficina").value,
+                    data: document.getElementById("dataOficina").value,
+                    inicio: document.getElementById("horaInicio").value,
+                    fim: document.getElementById("horaFim").value,
+                    cidade: document.getElementById("cidade").value,
+                    carga: document.getElementById("cargaHoraria").value,
+                    instituicao: document.getElementById("instituicao").value,
+                    endereco: document.getElementById("endereco").value,
+                    contato: document.getElementById("contato").value,
+                    telefone: document.getElementById("telefone").value
+                })
             })
             .then(res => res.json())
             .then(data => {
