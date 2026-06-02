@@ -95,6 +95,9 @@
 
         window.onload = () => {
             fetch(URL_GAS + "?acao=dados&cache=" + new Date().getTime())
+                .then(r => r.text())
+                .then(t => console.log("RESPOSTA BRUTA DO SERVIDOR:", t))
+                .catch(e => console.error("ERRO NO FETCH:", e))
                 .then(res => res.json())
                 .then(data => {
                     dadosGlobais = data;
