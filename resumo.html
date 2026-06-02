@@ -1,243 +1,180 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-PT">
 <head>
     <meta charset="UTF-8">
     <title>Resumo de Horas - Equipe</title>
     <link rel="stylesheet" href="style.css">
     <style>
+        .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
         .card-branco { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 20px; }
         
-        .filtros-grid { display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 15px; align-items: end; background: #f9fafb; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 25px; }
-        @media (max-width: 768px) { .filtros-grid { grid-template-columns: 1fr; } }
+        .filtros-grid { 
+            display: grid; grid-template-columns: 1fr 1fr auto; gap: 15px; 
+            align-items: end; background: #f9fafb; padding: 20px; border-radius: 8px; 
+            border: 1px solid #e5e7eb; margin-bottom: 25px; 
+        }
         
-        .styled-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; text-align: center; }
-        .styled-table thead tr { background-color: var(--primary-color); color: #ffffff; font-weight: bold; }
-        .styled-table th, .styled-table td { padding: 12px 15px; border-bottom: 1px solid #dddddd; }
-        .styled-table tbody tr:hover { background-color: #f1f5f9; }
-        .styled-table tbody tr { transition: 0.2s; }
-        
-        .nome-coluna { text-align: left; font-weight: 600; color: #1f2937; }
-        .total-highlight { background-color: #dcfce7; font-weight: bold; color: #166534; }
-        .zero-value { color: #9ca3af; }
-        
-        .btn-filtrar { height: 42px; padding: 0 25px; background: var(--primary-color); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; }
-        .btn-filtrar:hover { filter: brightness(0.9); }
+        .styled-table { width: 100%; border-collapse: collapse; text-align: center; font-size: 14px; }
+        .styled-table thead tr { background-color: var(--primary-color); color: #ffffff; }
+        .styled-table th, .styled-table td { padding: 12px; border-bottom: 1px solid #e5e7eb; }
+        .total-highlight { font-weight: bold; color: var(--primary-color); background: #f0fdf4; }
+        .zero-value { color: #d1d5db; }
     </style>
 </head>
 <body>
-    <div class="container" style="max-width: 1100px;">
-        <a href="siscontrol.html" style="text-decoration: none; color: var(--primary-color); font-weight: 700;">← Voltar ao Início</a>
-        
-        <header class="form-header" style="margin-top: 15px;">
-            <h1 style="color: var(--primary-color); margin: 0;">📊 Resumo de Horas e Produtividade</h1>
-            <p style="margin-top: 5px; color: #6b7280;">Acompanhamento de Oficinas e Eventos por Instrutor</p>
+
+    <div class="container">
+        <header class="form-header" style="text-align: center;">
+            <a href="siscontrol.html" style="text-decoration: none; color: var(--primary-color); font-size: 14px; font-weight: 600;">← Voltar ao Início</a>
+            <h1>Resumo de Carga Horária</h1>
+            <p style="color: #6b7280;">Soma de horas trabalhadas em Oficinas e Eventos</p>
         </header>
 
-        <div class="card-branco">
-            
+        <div id="status" style="text-align: center; padding: 20px;">A calcular horas da equipe...</div>
+
+        <div id="conteudoPrincipal" style="display: none;">
             <div class="filtros-grid">
-                <div class="form-group" style="margin: 0;">
-                    <label>Data Inicial:</label>
-                    <input type="date" id="dataInicio" style="margin: 0; padding: 10px;">
-                </div>
-                <div class="form-group" style="margin: 0;">
-                    <label>Data Final:</label>
-                    <input type="date" id="dataFim" style="margin: 0; padding: 10px;">
-                </div>
-                <div class="form-group" style="margin: 0;">
-                    <label>Regional:</label>
-                    <select id="filtroRegional" style="margin: 0; padding: 10px;">
-                        <option value="Todas">Todas as Regionais</option>
+                <div class="form-group">
+                    <label>Mês:</label>
+                    <select id="filtroMes">
+                        <option value="1">Janeiro</option><option value="2">Fevereiro</option>
+                        <option value="3">Março</option><option value="4">Abril</option>
+                        <option value="5">Maio</option><option value="6">Junho</option>
+                        <option value="7">Julho</option><option value="8">Agosto</option>
+                        <option value="9">Setembro</option><option value="10">Outubro</option>
+                        <option value="11">Novembro</option><option value="12">Dezembro</option>
                     </select>
                 </div>
-                <button class="btn-filtrar" onclick="gerarRelatorio()">Aplicar Filtro</button>
+                <div class="form-group">
+                    <label>Ano:</label>
+                    <select id="filtroAno"></select>
+                </div>
+                <button class="btn-acao" onclick="gerarResumo()">Calcular</button>
             </div>
 
-            <div id="status" class="loading">Carregando e processando dados do banco...</div>
-
-            <div style="overflow-x: auto;">
-                <table class="styled-table" id="tabelaResumo" style="display: none;">
+            <div class="card-branco">
+                <table class="styled-table" id="tabelaResumo">
                     <thead>
                         <tr>
-                            <th class="nome-coluna">Nome do Instrutor</th>
-                            <th>Nº Oficinas</th>
-                            <th>CH Oficinas</th>
-                            <th>Nº Eventos</th>
-                            <th>CH Eventos</th>
-                            <th>Total Trabalhado</th>
+                            <th>Instrutor</th>
+                            <th>Oficinas</th>
+                            <th>Horas Oficinas</th>
+                            <th>Eventos</th>
+                            <th>Horas Eventos</th>
+                            <th>Total Geral</th>
                         </tr>
                     </thead>
-                    <tbody id="corpoTabela">
-                        </tbody>
+                    <tbody id="corpoTabela"></tbody>
                 </table>
+                <div id="msgVazio" style="display: none; text-align: center; padding: 20px;">Nenhum registo encontrado.</div>
             </div>
-            
-            <p id="msgVazio" style="display: none; text-align: center; color: #6b7280; padding: 20px;">Nenhum registro encontrado para este filtro.</p>
         </div>
     </div>
 
+    <script src="auth.js"></script>
     <script>
-        if (sessionStorage.getItem("logado") !== "sim") {
-            window.location.href = "index.html"; 
-        }
+        verificarLogin();
     </script>
-
     <script src="config.js"></script>
     <script>
-        let dadosGlobais = {};
+        let dadosBase = {};
 
         window.onload = () => {
             fetch(URL_GAS)
                 .then(res => res.json())
                 .then(data => {
-                    dadosGlobais = data;
+                    dadosBase = data;
                     
-                    // Configura datas padrão (Início do mês até hoje)
-                    const hoje = new Date();
-                    const primeiroDia = new Date(hoje.getFullYear(), hoje.getMonth(), 1);
-                    document.getElementById("dataInicio").value = formatarDataInput(primeiroDia);
-                    document.getElementById("dataFim").value = formatarDataInput(hoje);
-
-                    // Preenche o filtro de Regionais
-                    const regionaisUnicas = [...new Set(data.instrutoresData.map(i => i[3]))].filter(Boolean).sort();
-                    const select = document.getElementById("filtroRegional");
-                    regionaisUnicas.forEach(reg => {
-                        select.innerHTML += `<option value="${reg}">${reg}</option>`;
-                    });
-
-                    gerarRelatorio(); // Roda a primeira vez automático
-                })
-                .catch(err => {
-                    document.getElementById("status").innerText = "Erro ao conectar com o banco de dados.";
-                    document.getElementById("status").style.color = "red";
+                    // Preencher Anos
+                    const anos = new Set();
+                    (data.agendamentos || []).forEach(a => { if(a.data) anos.add(a.data.split('-')[0]); });
+                    const selectAno = document.getElementById("filtroAno");
+                    [...anos].sort().reverse().forEach(ano => selectAno.innerHTML += `<option value="${ano}">${ano}</option>`);
+                    
+                    document.getElementById("filtroMes").value = new Date().getMonth() + 1;
+                    document.getElementById("status").style.display = "none";
+                    document.getElementById("conteudoPrincipal").style.display = "block";
+                    gerarResumo();
                 });
         };
 
-        function formatarDataInput(dataObj) {
-            const y = dataObj.getFullYear();
-            const m = String(dataObj.getMonth() + 1).padStart(2, '0');
-            const d = String(dataObj.getDate()).padStart(2, '0');
-            return `${y}-${m}-${d}`;
+        function extrairMesAno(dataStr) {
+            if (!dataStr) return { mes: "", ano: "" };
+            const p = dataStr.includes('/') ? dataStr.split('/') : dataStr.split('-');
+            return dataStr.includes('/') ? { mes: parseInt(p[1]), ano: p[2] } : { mes: parseInt(p[1]), ano: p[0] };
         }
 
-        // Função mágica que converte "2h 30m" em 150 minutos para podermos somar
-        function parseHorasParaMinutos(strHora) {
-            if (!strHora) return 0;
-            let horas = 0; let min = 0;
-            const matchH = strHora.match(/(\d+)\s*h/i);
-            const matchM = strHora.match(/(\d+)\s*m/i);
-            if (matchH) horas = parseInt(matchH[1]);
-            if (matchM) min = parseInt(matchM[1]);
-            return (horas * 60) + min;
+        function cargaParaMinutos(str) {
+            if (!str) return 0;
+            const h = parseInt(str.match(/(\d+)h/)?.[1] || 0);
+            const m = parseInt(str.match(/(\d+)m/)?.[1] || 0);
+            return (h * 60) + m;
         }
 
-        // Função que converte minutos (ex: 150) de volta para "2h 30m"
         function formatarMinutosParaHoras(totalMinutos) {
-            if (totalMinutos === 0) return "0h 00m";
             const h = Math.floor(totalMinutos / 60);
-            const m = totalMinutos % 60;
-            return `${h}h ${m.toString().padStart(2, '0')}m`;
+            const m = Math.round(totalMinutos % 60);
+            return `${h}h ${m < 10 ? '0'+m : m}m`;
         }
 
-        function gerarRelatorio() {
-            document.getElementById("status").style.display = "none";
-            
-            const dtInicio = document.getElementById("dataInicio").value;
-            const dtFim = document.getElementById("dataFim").value;
-            const regFiltro = document.getElementById("filtroRegional").value;
+        function gerarResumo() {
+            const mesFiltro = parseInt(document.getElementById("filtroMes").value);
+            const anoFiltro = document.getElementById("filtroAno").value;
+            const instrutoresMap = {};
 
-            if (!dtInicio || !dtFim) {
-                alert("Por favor, selecione um período de datas válido."); return;
-            }
+            // 1. Processar Oficinas (Respostas)
+            (dadosBase.respostas || []).forEach(resp => {
+                const ag = dadosBase.agendamentos.find(a => a.id === resp.idAgendamento);
+                if (!ag) return;
+                const { mes, ano } = extrairMesAno(ag.data);
+                if (mes !== mesFiltro || ano !== anoFiltro) return;
 
-            // 1. Cria o esqueleto do relatório com todos os instrutores
-            let instrutoresMap = {};
-            dadosGlobais.instrutoresData.forEach(i => {
-                const nome = i[1].trim();
-                instrutoresMap[nome] = {
-                    nome: nome,
-                    regional: i[3] || "",
-                    qtdOficinas: 0,
-                    minOficinas: 0,
-                    qtdEventos: 0,
-                    minEventos: 0
-                };
+                const carga = cargaParaMinutos(ag.carga);
+                (resp.instrutores || "").split(',').forEach(nome => {
+                    const n = nome.trim();
+                    if (!instrutoresMap[n]) instrutoresMap[n] = { qtdOf: 0, minOf: 0, qtdEv: 0, minEv: 0 };
+                    instrutoresMap[n].qtdOf++;
+                    instrutoresMap[n].minOf += carga;
+                });
             });
 
-            // 2. Processa as Oficinas Realizadas (Respostas)
-            if (dadosGlobais.realizadas) {
-                dadosGlobais.realizadas.forEach(oficina => {
-                    if (oficina.data < dtInicio || oficina.data > dtFim) return;
-                    if (regFiltro !== "Todas" && oficina.regional !== regFiltro) return;
+            // 2. Processar Eventos
+            (dadosBase.eventos || []).forEach(ev => {
+                const { mes, ano } = extrairMesAno(ev[3]); // Coluna Data Evento
+                if (mes !== mesFiltro || ano !== anoFiltro) return;
 
-                    const instrutoresDaOficina = oficina.instrutores.split(',').map(s => s.trim()).filter(Boolean);
-                    const minutosGastos = parseHorasParaMinutos(oficina.cargaHoraria);
-
-                    instrutoresDaOficina.forEach(nome => {
-                        if (!instrutoresMap[nome]) {
-                            // Se o nome não tava na lista base, adiciona agora
-                            instrutoresMap[nome] = { nome: nome, regional: oficina.regional, qtdOficinas: 0, minOficinas: 0, qtdEventos: 0, minEventos: 0 };
-                        }
-                        instrutoresMap[nome].qtdOficinas++;
-                        instrutoresMap[nome].minOficinas += minutosGastos;
-                    });
+                const carga = cargaParaMinutos(ev[6]); // Coluna Carga Horária
+                (ev[8] || "").split(',').forEach(nome => {
+                    const n = nome.trim();
+                    if (!instrutoresMap[n]) instrutoresMap[n] = { qtdOf: 0, minOf: 0, qtdEv: 0, minEv: 0 };
+                    instrutoresMap[n].qtdEv++;
+                    instrutoresMap[n].minEv += carga;
                 });
-            }
+            });
 
-            // 3. Processa os Eventos/Treinamentos (Eventos)
-            if (dadosGlobais.eventos) {
-                dadosGlobais.eventos.forEach(evento => {
-                    if (evento.data < dtInicio || evento.data > dtFim) return;
-                    if (regFiltro !== "Todas" && evento.regional !== regFiltro && regFiltro !== "TODOS") return;
-
-                    const participantes = evento.participantes.split(',').map(s => s.trim()).filter(Boolean);
-                    const minutosGastos = parseHorasParaMinutos(evento.cargaHoraria);
-
-                    participantes.forEach(nome => {
-                        if (!instrutoresMap[nome]) {
-                            instrutoresMap[nome] = { nome: nome, regional: evento.regional, qtdOficinas: 0, minOficinas: 0, qtdEventos: 0, minEventos: 0 };
-                        }
-                        instrutoresMap[nome].qtdEventos++;
-                        instrutoresMap[nome].minEventos += minutosGastos;
-                    });
-                });
-            }
-
-            // 4. Monta a Tabela
             const tbody = document.getElementById("corpoTabela");
             tbody.innerHTML = "";
             let temDados = false;
 
-            // Transforma o Objeto em Array e ordena alfabeticamente
-            const listaResultados = Object.values(instrutoresMap).sort((a, b) => a.nome.localeCompare(b.nome));
-
-            listaResultados.forEach(inst => {
-                const totalMinutos = inst.minOficinas + inst.minEventos;
+            Object.keys(instrutoresMap).sort().forEach(nome => {
+                const inst = instrutoresMap[nome];
+                const totalMin = inst.minOf + inst.minEv;
                 
-                // Só mostra na tela quem trabalhou (ou participou de algo) no período filtrado
-                if (totalMinutos > 0 || inst.qtdOficinas > 0 || inst.qtdEventos > 0) {
+                if (totalMin > 0) {
                     temDados = true;
-                    
-                    const tr = document.createElement("tr");
-                    tr.innerHTML = `
-                        <td class="nome-coluna">${inst.nome}</td>
-                        <td class="${inst.qtdOficinas === 0 ? 'zero-value' : ''}">${inst.qtdOficinas}</td>
-                        <td class="${inst.minOficinas === 0 ? 'zero-value' : ''}">${formatarMinutosParaHoras(inst.minOficinas)}</td>
-                        <td class="${inst.qtdEventos === 0 ? 'zero-value' : ''}">${inst.qtdEventos}</td>
-                        <td class="${inst.minEventos === 0 ? 'zero-value' : ''}">${formatarMinutosParaHoras(inst.minEventos)}</td>
-                        <td class="total-highlight">${formatarMinutosParaHoras(totalMinutos)}</td>
-                    `;
-                    tbody.appendChild(tr);
+                    tbody.innerHTML += `<tr>
+                        <td><strong>${nome}</strong></td>
+                        <td>${inst.qtdOf}</td>
+                        <td>${formatarMinutosParaHoras(inst.minOf)}</td>
+                        <td>${inst.qtdEv}</td>
+                        <td>${formatarMinutosParaHoras(inst.minEv)}</td>
+                        <td class="total-highlight">${formatarMinutosParaHoras(totalMin)}</td>
+                    </tr>`;
                 }
             });
 
-            if (temDados) {
-                document.getElementById("tabelaResumo").style.display = "table";
-                document.getElementById("msgVazio").style.display = "none";
-            } else {
-                document.getElementById("tabelaResumo").style.display = "none";
-                document.getElementById("msgVazio").style.display = "block";
-            }
+            document.getElementById("tabelaResumo").style.display = temDados ? "table" : "none";
+            document.getElementById("msgVazio").style.display = temDados ? "none" : "block";
         }
     </script>
 </body>
