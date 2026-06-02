@@ -1,150 +1,278 @@
 <!DOCTYPE html>
-<html lang="pt-PT">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Previsão de Gastos</title>
+    <title>Previsão Financeira da Oficina</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .readonly-field { background-color: #f3f4f6 !important; color: #166534 !important; font-weight: 700; border: 1px solid #d1d5db !important; }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
         .card-branco { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 20px; }
+        
+        .filtros-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
         .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px; }
-        @media (max-width: 600px) { .grid-3 { grid-template-columns: 1fr; } }
-        .agendamentos-grid { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 15px; max-height: 300px; overflow-y: auto; }
-        .agendamento-card { border: 2px solid #e5e7eb; padding: 12px; border-radius: 8px; cursor: pointer; transition: 0.2s; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px; }
+        @media (max-width: 700px) { .filtros-grid, .grid-3, .grid-2 { grid-template-columns: 1fr; } }
+        
+        .form-group label { font-size: 13px; font-weight: 600; color: #4b5563; margin-bottom: 5px; display: block; }
+        .form-group input, .form-group select { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+        
+        .readonly-field { background-color: #f3f4f6 !important; color: #1f2937 !important; font-weight: bold; cursor: not-allowed; }
+        .total-destaque { background-color: #dcfce7 !important; color: #166534 !important; font-size: 18px !important; border-color: #86efac !important; }
+
+        .agendamentos-grid { display: grid; grid-template-columns: 1fr; gap: 12px; max-height: 400px; overflow-y: auto; padding-right: 5px; }
+        .agendamento-card {
+            background-color: white; border: 2px solid #e5e7eb; border-radius: 8px;
+            padding: 15px; cursor: pointer; transition: all 0.2s ease;
+        }
         .agendamento-card:hover { border-color: #9ca3af; }
-        .agendamento-card.selecionado { border-color: var(--primary-color); background: #f0fdf4; }
+        .agendamento-card.selecionado { border-color: var(--primary-color) !important; background-color: #f0fdf4; }
+
+        .secao-titulo { font-size: 14px; text-transform: uppercase; letter-spacing: 1px; color: #6b7280; margin: 25px 0 10px; border-bottom: 2px solid #f3f4f6; padding-bottom: 5px; }
+
+        .btn-acao {
+            background-color: var(--primary-color); color: white; border: none; 
+            padding: 15px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; 
+            width: 100%; margin-top: 20px; font-size: 15px; transition: background 0.2s;
+        }
     </style>
 </head>
 <body>
-
     <div class="container">
         <header class="form-header" style="text-align: center;">
             <a href="siscontrol.html" style="text-decoration: none; color: var(--primary-color); font-size: 14px; font-weight: 600;">← Voltar ao Início</a>
-            <h1>Previsão de Gastos</h1>
+            <h1>Previsão Financeira</h1>
         </header>
 
-        <div id="status" style="text-align: center; padding: 20px;">Carregando oficinas...</div>
+        <div id="status" style="text-align: center; font-weight: bold; padding: 20px; color: #4b5563;">Carregando oficinas...</div>
 
-        <div id="conteudoPrincipal" style="display:none;">
+        <div id="conteudoPrincipal" style="display: none;">
+            
             <div class="card-branco">
-                <h3>1. Selecione a Oficina</h3>
+                <h3 style="margin-top: 0;">1. Selecione a Oficina</h3>
+                <div class="filtros-grid">
+                    <div class="form-group"><label>Regional:</label><select id="fRegional" onchange="aplicarFiltros()"><option value="Todas">Todas</option></select></div>
+                    <div class="form-group"><label>Oficina:</label><select id="fOficina" onchange="aplicarFiltros()"><option value="Todas">Todas</option></select></div>
+                </div>
                 <div class="agendamentos-grid" id="listaAgendamentos"></div>
             </div>
 
-            <form id="formPrevisao" class="card-branco" style="display:none;">
-                <h3 id="tituloOficina">Previsão para: -</h3>
+            <form id="formPrevisao" class="card-branco" style="display: none;">
+                <h3 id="tituloOficina" style="margin-top: 0; color: var(--primary-color);">Lançar Previsão</h3>
                 
+                <div class="secao-titulo">Hospedagem</div>
                 <div class="grid-3">
-                    <div class="form-group"><label>Hosp. Diária (R$):</label><input type="number" id="hospDiaria" step="0.01" oninput="calcularTudo()"></div>
-                    <div class="form-group"><label>Qtde Quartos:</label><input type="number" id="hospQuartos" oninput="calcularTudo()"></div>
-                    <div class="form-group"><label>Total Hosp.:</label><input type="number" id="hospTotal" class="readonly-field" readonly></div>
+                    <div class="form-group"><label>Hosp. Diária (R$):</label><input type="text" id="hospDiaria" placeholder="0,00" onkeyup="calcularTotais()"></div>
+                    <div class="form-group"><label>Hosp. Quartos (Qtd):</label><input type="number" id="hospQuartos" placeholder="0" onkeyup="calcularTotais()" onchange="calcularTotais()"></div>
+                    <div class="form-group"><label>Hosp. Total (R$):</label><input type="text" id="hospTotal" class="readonly-field" readonly placeholder="0,00"></div>
                 </div>
 
+                <div class="secao-titulo">Alimentação</div>
                 <div class="grid-3">
-                    <div class="form-group"><label>Alim. Valor (R$):</label><input type="number" id="alimValor" step="0.01" oninput="calcularTudo()"></div>
-                    <div class="form-group"><label>Qtd Pessoas:</label><input type="number" id="alimQtd" oninput="calcularTudo()"></div>
-                    <div class="form-group"><label>Total Alim.:</label><input type="number" id="alimTotal" class="readonly-field" readonly></div>
+                    <div class="form-group"><label>Alim. Valor (R$):</label><input type="text" id="alimValor" placeholder="0,00" onkeyup="calcularTotais()"></div>
+                    <div class="form-group"><label>Alim. Qtd:</label><input type="number" id="alimQtd" placeholder="0" onkeyup="calcularTotais()" onchange="calcularTotais()"></div>
+                    <div class="form-group"><label>Alim. Total (R$):</label><input type="text" id="alimTotal" class="readonly-field" readonly placeholder="0,00"></div>
                 </div>
 
+                <div class="secao-titulo">Transporte & Deslocamento</div>
                 <div class="grid-3">
-                    <div class="form-group"><label>Desloc. KM:</label><input type="number" id="deslocKm" oninput="calcularTudo()"></div>
-                    <div class="form-group"><label>Valor KM (R$):</label><input type="number" id="deslocValorKm" step="0.01" oninput="calcularTudo()"></div>
-                    <div class="form-group"><label>Total Desloc.:</label><input type="number" id="deslocTotal" class="readonly-field" readonly></div>
+                    <div class="form-group"><label>Transp. Geral (R$):</label><input type="text" id="transpValor" placeholder="0,00" onkeyup="calcularTotais()" title="Valor total previsto para passagens, etc."></div>
+                    <div class="form-group"><label>Desloc. KM:</label><input type="number" id="deslocKm" placeholder="0" onkeyup="calcularTotais()" onchange="calcularTotais()"></div>
+                    <div class="form-group"><label>Valor / KM (R$):</label><input type="text" id="deslocValorKm" placeholder="0,00" onkeyup="calcularTotais()"></div>
+                </div>
+                <div class="grid-3">
+                    <div class="form-group" style="grid-column: 3;"><label>Desloc. Total (R$):</label><input type="text" id="deslocTotal" class="readonly-field" readonly placeholder="0,00"></div>
                 </div>
 
+                <div class="secao-titulo">Outros Gastos</div>
+                <div class="grid-2">
+                    <div class="form-group"><label>Outros (Descrição):</label><input type="text" id="outrosDesc" placeholder="Ex: Pedágio, Material extra"></div>
+                    <div class="form-group"><label>Outros (Total R$):</label><input type="text" id="outrosValor" placeholder="0,00" onkeyup="calcularTotais()"></div>
+                </div>
+
+                <div class="secao-titulo" style="border: none; margin-top: 30px;"></div>
                 <div class="form-group">
-                    <label>Outros (Descrição):</label>
-                    <input type="text" id="outroDesc">
-                </div>
-                <div class="form-group">
-                    <label>Outros (Valor R$):</label>
-                    <input type="number" id="outroTotal" step="0.01" oninput="calcularTudo()">
+                    <label>Total Geral Previsto (R$):</label>
+                    <input type="text" id="totalGeral" class="readonly-field total-destaque" readonly placeholder="0,00">
                 </div>
 
-                <h2 style="color: var(--primary-color);">Total Geral: R$ <span id="totalGeral">0,00</span></h2>
-                <button type="submit" id="btnEnviar" class="btn-acao" style="width:100%;">Salvar Previsão no Sistema</button>
+                <button type="submit" id="btnEnviar" class="btn-acao">Salvar Previsão Financeira</button>
             </form>
         </div>
     </div>
 
     <script src="auth.js"></script>
-    <script>
-        verificarLogin();
-    </script>
+    <script>verificarLogin();</script>
     <script src="config.js"></script>
+    
     <script>
-        let agendamentosGlobais = [];
-        let agAtual = null;
+        let pendentesGlobais = [];
+        let agendamentoSelecionado = null;
 
         window.onload = () => {
             fetch(URL_GAS)
                 .then(res => res.json())
                 .then(data => {
-                    agendamentosGlobais = data.agendamentos || [];
-                    const container = document.getElementById("listaAgendamentos");
-                    
-                    agendamentosGlobais.forEach(ag => {
-                        const div = document.createElement("div");
-                        div.className = "agendamento-card";
-                        div.onclick = () => selecionar(div, ag);
-                        div.innerHTML = `<strong>${ag.data}</strong> | ${ag.oficina} <br> <small>${ag.inst}</small>`;
-                        container.appendChild(div);
+                    pendentesGlobais = (data.agendamentos || []).filter(a => a.status === "Agendada");
+
+                    const regionais = new Set(), oficinas = new Set();
+                    pendentesGlobais.forEach(ag => {
+                        if (ag.regional) regionais.add(ag.regional);
+                        if (ag.oficina) oficinas.add(ag.oficina);
                     });
+                    [...regionais].sort().forEach(r => document.getElementById("fRegional").innerHTML += `<option value="${r}">${r}</option>`);
+                    [...oficinas].sort().forEach(o => document.getElementById("fOficina").innerHTML += `<option value="${o}">${o}</option>`);
 
                     document.getElementById("status").style.display = "none";
                     document.getElementById("conteudoPrincipal").style.display = "block";
+                    renderizarLista(pendentesGlobais);
+                })
+                .catch(err => {
+                    document.getElementById("status").innerText = "Erro ao carregar dados: " + err.message;
+                    document.getElementById("status").style.color = "#dc2626";
                 });
         };
 
-        function selecionar(div, ag) {
-            agAtual = ag;
-            document.querySelectorAll(".agendamento-card").forEach(el => el.classList.remove("selecionado"));
-            div.classList.add("selecionado");
-            document.getElementById("tituloOficina").innerText = `Previsão para: ${ag.oficina} (${ag.inst})`;
-            document.getElementById("formPrevisao").style.display = "block";
+        function aplicarFiltros() {
+            const reg = document.getElementById("fRegional").value;
+            const ofi = document.getElementById("fOficina").value;
+            const filtrados = pendentesGlobais.filter(ag => (reg === "Todas" || ag.regional === reg) && (ofi === "Todas" || ag.oficina === ofi));
+            
+            renderizarLista(filtrados);
+            document.getElementById("formPrevisao").style.display = "none";
         }
 
-        function calcularTudo() {
-            const hTotal = (parseFloat(document.getElementById("hospDiaria").value)||0) * (parseFloat(document.getElementById("hospQuartos").value)||0);
-            document.getElementById("hospTotal").value = hTotal.toFixed(2);
+        function renderizarLista(lista) {
+            const container = document.getElementById("listaAgendamentos");
+            container.innerHTML = "";
+
+            if (lista.length === 0) {
+                container.innerHTML = "<div style='text-align:center; padding: 20px; color: #6b7280;'>Nenhuma oficina agendada encontrada.</div>";
+                return;
+            }
+
+            lista.sort((a, b) => a.data.localeCompare(b.data));
+
+            lista.forEach(ag => {
+                const div = document.createElement("div");
+                div.className = "agendamento-card";
+                
+                // Aplica a cor global configurada no config.js
+                if (typeof obterCorRegional === "function") {
+                    div.style.borderLeft = `6px solid ${obterCorRegional(ag.regional)}`;
+                }
+
+                div.onclick = () => selecionarAgendamento(div, ag);
+                
+                let dataFormatada = ag.data;
+                if (dataFormatada.includes('-')) {
+                    const p = dataFormatada.split('-');
+                    dataFormatada = p.length >= 3 ? `${p[2]}/${p[1]}/${p[0]}` : dataFormatada;
+                }
+
+                div.innerHTML = `
+                    <div style="color: var(--primary-color); font-weight: bold; margin-bottom: 5px;">
+                        ${dataFormatada} | ${ag.inicio ? ag.inicio.substring(0,5) : "--:--"}
+                    </div>
+                    <div style="font-size: 15px; font-weight: 600; color: #374151;">${ag.oficina}</div>
+                    <div style="font-size: 13px; color: #6b7280;">🏢 ${ag.inst} | 📍 ${ag.regional}</div>
+                `;
+                container.appendChild(div);
+            });
+        }
+
+        function selecionarAgendamento(elemento, ag) {
+            agendamentoSelecionado = ag;
+            document.querySelectorAll(".agendamento-card").forEach(el => el.classList.remove("selecionado"));
+            elemento.classList.add("selecionado");
             
-            const aTotal = (parseFloat(document.getElementById("alimValor").value)||0) * (parseFloat(document.getElementById("alimQtd").value)||0);
-            document.getElementById("alimTotal").value = aTotal.toFixed(2);
+            document.getElementById("tituloOficina").innerText = `Previsão: ${ag.oficina} (${ag.inst})`;
             
-            const dTotal = (parseFloat(document.getElementById("deslocKm").value)||0) * (parseFloat(document.getElementById("deslocValorKm").value)||0);
-            document.getElementById("deslocTotal").value = dTotal.toFixed(2);
+            // Limpar formulário ao trocar de oficina
+            document.getElementById("formPrevisao").reset();
+            calcularTotais(); 
             
-            const total = hTotal + aTotal + dTotal + (parseFloat(document.getElementById("outroTotal").value)||0);
-            document.getElementById("totalGeral").innerText = total.toFixed(2).replace('.', ',');
+            document.getElementById("formPrevisao").style.display = "block";
+            document.getElementById("formPrevisao").scrollIntoView({ behavior: "smooth" });
+        }
+
+        // --- SISTEMA DE CÁLCULOS MATEMÁTICOS ---
+        function extrairNumero(valorString) {
+            if (!valorString) return 0;
+            // Troca a vírgula do padrão brasileiro por ponto para o JavaScript calcular
+            let numeroFormatado = valorString.replace(/\./g, '').replace(',', '.');
+            let num = parseFloat(numeroFormatado);
+            return isNaN(num) ? 0 : num;
+        }
+
+        function formatarMoeda(valorNumerico) {
+            if (valorNumerico === 0) return "0,00";
+            return valorNumerico.toFixed(2).replace('.', ',');
+        }
+
+        function calcularTotais() {
+            // Hospedagem
+            const hDiaria = extrairNumero(document.getElementById("hospDiaria").value);
+            const hQuartos = extrairNumero(document.getElementById("hospQuartos").value);
+            const hTotal = hDiaria * hQuartos;
+            document.getElementById("hospTotal").value = formatarMoeda(hTotal);
+
+            // Alimentação
+            const aValor = extrairNumero(document.getElementById("alimValor").value);
+            const aQtd = extrairNumero(document.getElementById("alimQtd").value);
+            const aTotal = aValor * aQtd;
+            document.getElementById("alimTotal").value = formatarMoeda(aTotal);
+
+            // Deslocamento
+            const dKm = extrairNumero(document.getElementById("deslocKm").value);
+            const dValorKm = extrairNumero(document.getElementById("deslocValorKm").value);
+            const dTotal = dKm * dValorKm;
+            document.getElementById("deslocTotal").value = formatarMoeda(dTotal);
+
+            // Outros / Transporte Isolado
+            const transp = extrairNumero(document.getElementById("transpValor").value);
+            const outros = extrairNumero(document.getElementById("outrosValor").value);
+
+            // Total Geral
+            const total = hTotal + aTotal + dTotal + transp + outros;
+            document.getElementById("totalGeral").value = formatarMoeda(total);
         }
 
         document.getElementById("formPrevisao").onsubmit = (e) => {
             e.preventDefault();
             const btn = document.getElementById("btnEnviar");
-            btn.innerText = "Salvando...";
+            btn.innerText = "A guardar Previsão...";
             btn.disabled = true;
 
+            // Recalcula só para garantir a integridade dos dados finais
+            calcularTotais();
+
             const payload = {
-                acao: "salvarPrevisao", // Roteador no Código.gs
-                idAgendamento: agAtual.id,
-                regional: agAtual.regional,
-                oficina: agAtual.oficina,
-                instituicao: agAtual.inst,
-                dataOficina: agAtual.data,
+                acao: "salvarPrevisao",
+                idAgendamento: agendamentoSelecionado.id,
+                regional: agendamentoSelecionado.regional,
+                oficina: agendamentoSelecionado.oficina,
+                instituicao: agendamentoSelecionado.inst,
+                dataOficina: agendamentoSelecionado.data,
+                
                 hospDiaria: document.getElementById("hospDiaria").value,
                 hospQuartos: document.getElementById("hospQuartos").value,
                 hospTotal: document.getElementById("hospTotal").value,
+                
                 alimValor: document.getElementById("alimValor").value,
                 alimQtd: document.getElementById("alimQtd").value,
                 alimTotal: document.getElementById("alimTotal").value,
-                transporteTotal: 0, // Placeholder
+                
+                transpValor: document.getElementById("transpValor").value, // O novo campo
+
                 deslocKm: document.getElementById("deslocKm").value,
                 deslocValorKm: document.getElementById("deslocValorKm").value,
                 deslocTotal: document.getElementById("deslocTotal").value,
-                outrosDesc: document.getElementById("outroDesc").value,
-                outrosTotal: document.getElementById("outroTotal").value,
-                totalGeral: document.getElementById("totalGeral").innerText.replace(',', '.')
+                
+                outrosDesc: document.getElementById("outrosDesc").value,
+                outrosValor: document.getElementById("outrosValor").value,
+                
+                totalGeral: document.getElementById("totalGeral").value
             };
 
             fetch(URL_GAS, {
@@ -155,14 +283,19 @@
             .then(res => res.json())
             .then(data => {
                 if(data.status === "sucesso") {
-                    alert("Previsão salva com sucesso!");
+                    alert("Previsão guardada com sucesso!");
                     location.reload();
                 } else {
                     alert("Erro: " + data.msg);
+                    btn.innerText = "Salvar Previsão Financeira";
                     btn.disabled = false;
                 }
             })
-            .catch(err => { alert("Falha: " + err); btn.disabled = false; });
+            .catch(err => {
+                alert("Falha na ligação: " + err);
+                btn.innerText = "Salvar Previsão Financeira";
+                btn.disabled = false;
+            });
         };
     </script>
 </body>
