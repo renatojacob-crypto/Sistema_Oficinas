@@ -1,223 +1,273 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-PT">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Resumo de Escala - WhatsApp</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .card-branco { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 20px; }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        .card-branco { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 20px; }
+        
+        .filtros-grid { 
+            display: grid; grid-template-columns: 1fr 1fr 1fr auto; gap: 15px; 
+            align-items: end; background: #f9fafb; padding: 20px; border-radius: 8px; 
+            border: 1px solid #e5e7eb; margin-bottom: 25px; 
+        }
+        @media (max-width: 700px) { .filtros-grid { grid-template-columns: 1fr; } }
+        
+        .form-group label { font-size: 13px; font-weight: 600; color: #4b5563; margin-bottom: 5px; display: block; }
+        .form-group select { 
+            width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; 
+            background: white; outline: none; font-size: 14px;
+        }
+
+        .btn-acao {
+            background-color: var(--primary-color); color: white; border: none; 
+            padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; 
+            height: 40px; transition: background 0.2s;
+        }
+        .btn-acao:hover { background-color: #0f172a; }
+
+        .btn-whatsapp { 
+            background-color: #25D366; color: white; border: none; 
+            padding: 12px 25px; border-radius: 8px; font-size: 16px; font-weight: bold; 
+            cursor: pointer; display: flex; align-items: center; justify-content: center; 
+            gap: 10px; width: 100%; margin-top: 20px; transition: background 0.2s;
+        }
+        .btn-whatsapp:hover { background-color: #1ea952; }
+
         .regional-titulo { color: var(--primary-color); border-bottom: 2px solid #eee; padding-bottom: 5px; margin-top: 20px; font-size: 18px; }
         .oficina-titulo { color: #f59e0b; font-size: 15px; margin-top: 15px; margin-bottom: 5px; font-weight: bold; }
-        .escala-item { font-size: 14px; margin-bottom: 5px; padding-left: 10px; border-left: 3px solid #10b981; }
+        .escala-item { font-size: 14px; margin-bottom: 8px; padding-left: 10px; border-left: 3px solid #10b981; background: #f8fafc; padding: 8px; border-radius: 0 6px 6px 0; }
         
-        .btn-whatsapp { 
-            background-color: #25D366; 
-            color: white; 
-            border: none; 
-            padding: 12px 25px; 
-            border-radius: 8px; 
-            font-size: 16px; 
-            font-weight: bold; 
-            cursor: pointer; 
-            display: flex; 
-            align-items: center; 
-            gap: 10px;
-            width: 100%;
-            justify-content: center;
-            margin-top: 25px;
-            box-shadow: 0 4px 6px rgba(37, 211, 102, 0.3);
-        }
-        .btn-whatsapp:hover { background-color: #128C7E; }
+        #msgVazio { text-align: center; color: #6b7280; font-style: italic; padding: 30px; }
     </style>
 </head>
 <body>
-    <div class="container" style="max-width: 800px;">
-        <a href="siscontrol.html" style="text-decoration: none; color: var(--primary-color); font-weight: 700;">← Voltar ao Início</a>
-        
-        <header class="form-header" style="margin-top: 15px;">
-            <h1 style="color: var(--primary-color); margin: 0;">📱 Resumo para WhatsApp</h1>
-            <p style="margin-top: 5px; color: #6b7280;">Próximos 15 dias de oficinas escaladas</p>
+
+    <div class="container">
+        <header class="form-header" style="margin-bottom: 20px; text-align: center;">
+            <a href="siscontrol.html" style="text-decoration: none; color: var(--primary-color); font-size: 14px; font-weight: 600; display: block; margin-bottom: 10px;">← Voltar ao Início</a>
+            <h1 style="color: var(--primary-color); margin: 0;">Compartilhar Escala</h1>
+            <p style="color: #6b7280; font-size: 14px; margin-top: 5px;">Gere o relatório formatado para o WhatsApp</p>
         </header>
 
-        <div class="card-branco" style="display:none; background: #f9fafb;" id="containerFiltro">
-            <label style="font-weight: 600; font-size: 14px;">Selecione a Regional para o envio:</label>
-            <select id="filtroRegional" onchange="atualizarRelatorio()" style="width: 100%; padding: 10px; margin-top: 8px; margin-bottom: 0;">
-                <option value="Todas">Todas as Regionais (Relatório Geral)</option>
-            </select>
-        </div>
+        <div id="status" style="text-align: center; font-weight: bold; padding: 20px; color: #4b5563;">A carregar dados do servidor...</div>
 
-        <div class="card-branco" id="painelRelatorio">
-            <div id="status">Buscando escalas no banco de dados...</div>
-            <div id="conteudoRelatorio" style="display:none;"></div>
+        <div id="conteudoPrincipal" style="display: none;">
             
-            <button id="btnZap" class="btn-whatsapp" style="display:none;" onclick="enviarWhatsApp()">
-                <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                    <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/>
-                </svg>
-                <span id="txtBotaoZap">Compartilhar no WhatsApp</span>
-            </button>
+            <div class="filtros-grid">
+                <div class="form-group">
+                    <label>Mês:</label>
+                    <select id="filtroMes">
+                        <option value="Todos">Todos</option>
+                        <option value="1">Janeiro</option>
+                        <option value="2">Fevereiro</option>
+                        <option value="3">Março</option>
+                        <option value="4">Abril</option>
+                        <option value="5">Maio</option>
+                        <option value="6">Junho</option>
+                        <option value="7">Julho</option>
+                        <option value="8">Agosto</option>
+                        <option value="9">Setembro</option>
+                        <option value="10">Outubro</option>
+                        <option value="11">Novembro</option>
+                        <option value="12">Dezembro</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Ano:</label>
+                    <select id="filtroAno">
+                        <option value="Todos">Todos</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Regional:</label>
+                    <select id="filtroRegional">
+                        <option value="Todas">Todas</option>
+                    </select>
+                </div>
+                <button class="btn-acao" onclick="gerarRelatorio()">Gerar Relatório</button>
+            </div>
+
+            <div class="card-branco" id="boxRelatorio" style="display: none;">
+                <div id="conteudoRelatorio"></div>
+                <button class="btn-whatsapp" id="btnZap" onclick="enviarWhatsApp()">
+                    <span id="txtBotaoZap">Compartilhar no WhatsApp</span>
+                </button>
+            </div>
+
+            <div id="msgVazio" style="display: none;">Não há escalas registadas para os filtros selecionados.</div>
         </div>
     </div>
 
-    <script>
-        if (sessionStorage.getItem("logado") !== "sim") {
-            window.location.href = "index.html"; 
-        }
-    </script>
-
+    <script src="auth.js"></script>
     <script src="config.js"></script>
     <script>
-        let textoWhatsApp = ""; 
-        let listaGlobalEscalas = [];
-        let listaAgendamentos = []; // NOVO: Variável para armazenar os agendamentos e buscar a hora
+        let escalasFormatadas = [];
+        let textoWhatsApp = "";
 
         window.onload = () => {
             fetch(URL_GAS)
-                .then(res => res.json())
-                .then(data => {
-                    listaGlobalEscalas = data.escala || [];
-                    listaAgendamentos = data.agendamentos || []; // NOVO: Salva os agendamentos
-                    carregarFiltroRegionais();
-                    processarEscala();
+                .then(res => {
+                    if (!res.ok) throw new Error("Erro na ligação ao servidor: " + res.status);
+                    return res.json();
                 })
-                .catch(() => document.getElementById("status").innerText = "Erro ao carregar dados.");
+                .then(data => {
+                    if (data.status === "erro" || data.erro) throw new Error(data.msg || data.erro);
+
+                    // 1. Criar um mapa rápido de Agendamentos (usando o ID)
+                    const agMap = {};
+                    (data.agendamentos || []).forEach(ag => {
+                        agMap[ag.id] = ag;
+                    });
+
+                    // 2. Unir a aba Escala com os dados base do Agendamento
+                    escalasFormatadas = (data.escala || []).map(esc => {
+                        const ag = agMap[esc.idAgendamento] || {};
+                        const dataOriginal = esc.dataEscala || ag.data || "";
+
+                        return {
+                            regional: ag.regional || "Sem Regional",
+                            oficina: ag.oficina || "Sem Oficina",
+                            instituicao: ag.inst || "Instituição não informada",
+                            dataOriginal: dataOriginal,
+                            dataBR: formatarDataBR(dataOriginal),
+                            hora: ag.inicio ? ag.inicio.substring(0,5) : "--:--",
+                            instrutores: esc.instrutoresEscalados || "Sem instrutores definidos"
+                        };
+                    });
+
+                    // 3. Extrair listas únicas para os Filtros
+                    const regionais = new Set();
+                    const anos = new Set();
+
+                    escalasFormatadas.forEach(esc => {
+                        if (esc.regional !== "Sem Regional") regionais.add(esc.regional);
+                        const { ano } = extrairMesAno(esc.dataOriginal);
+                        if (ano) anos.add(ano);
+                    });
+
+                    popularSelect("filtroRegional", [...regionais].sort());
+
+                    const selectAno = document.getElementById("filtroAno");
+                    [...anos].sort().reverse().forEach(ano => {
+                        selectAno.innerHTML += `<option value="${ano}">${ano}</option>`;
+                    });
+                    
+                    const anoAtual = new Date().getFullYear().toString();
+                    if(anos.has(anoAtual)) selectAno.value = anoAtual;
+
+                    document.getElementById("status").style.display = "none";
+                    document.getElementById("conteudoPrincipal").style.display = "block";
+
+                    gerarRelatorio();
+                })
+                .catch(err => {
+                    document.getElementById("status").innerText = "Falha ao carregar os dados: " + err.message;
+                    document.getElementById("status").style.color = "#dc2626";
+                    console.error(err);
+                });
         };
 
-        function carregarFiltroRegionais() {
-            if (listaGlobalEscalas.length === 0) return;
-            
-            const regionaisUnicas = [...new Set(listaGlobalEscalas.map(e => e.regional))].filter(Boolean).sort();
-            
-            const select = document.getElementById("filtroRegional");
-            regionaisUnicas.forEach(reg => {
-                select.innerHTML += `<option value="${reg}">${reg}</option>`;
+        function popularSelect(id, array) {
+            const select = document.getElementById(id);
+            array.forEach(item => {
+                select.innerHTML += `<option value="${item}">${item}</option>`;
             });
-            
-            document.getElementById("containerFiltro").style.display = "block";
         }
 
-        function atualizarRelatorio() {
-            processarEscala();
-        }
-
-        function formatarDataISO(dataObj) {
-            const y = dataObj.getFullYear();
-            const m = String(dataObj.getMonth() + 1).padStart(2, '0');
-            const d = String(dataObj.getDate()).padStart(2, '0');
-            return `${y}-${m}-${d}`;
-        }
-
-        function padronizarDataString(d) {
-            if (!d) return "";
-            if (d.includes('/')) {
-                let p = d.split('/');
-                return `${p[2]}-${p[1].padStart(2,'0')}-${p[0].padStart(2,'0')}`;
+        function formatarDataBR(dataStr) {
+            if (!dataStr) return "";
+            if (dataStr.includes('/')) return dataStr;
+            if (dataStr.includes('-')) {
+                const p = dataStr.split('-');
+                if (p.length >= 3) return `${p[2]}/${p[1]}/${p[0]}`;
             }
-            return d.substring(0, 10);
+            return dataStr;
         }
 
-        function processarEscala() {
-            if (listaGlobalEscalas.length === 0) {
-                document.getElementById("status").innerText = "Nenhuma escala lançada ainda no banco de dados.";
-                return;
+        function extrairMesAno(dataStr) {
+            if (!dataStr) return { mes: "", ano: "" };
+            if (dataStr.includes('/')) {
+                const p = dataStr.split('/');
+                if (p.length === 3) return { mes: parseInt(p[1]).toString(), ano: p[2] };
+            } else if (dataStr.includes('-')) {
+                const p = dataStr.split('-');
+                if (p.length >= 3) return { mes: parseInt(p[1]).toString(), ano: p[0] };
             }
+            return { mes: "", ano: "" };
+        }
 
+        function gerarRelatorio() {
+            const valMes = document.getElementById("filtroMes").value;
+            const valAno = document.getElementById("filtroAno").value;
             const regionalSelecionada = document.getElementById("filtroRegional").value;
-            const hoje = new Date();
-            const daqui15Dias = new Date();
-            daqui15Dias.setDate(hoje.getDate() + 15);
 
-            const strHoje = formatarDataISO(hoje);
-            const str15Dias = formatarDataISO(daqui15Dias);
-
-            const agendados = [];
-            listaGlobalEscalas.forEach(esc => {
-                const dataISO = padronizarDataString(esc.data);
-                
-                if (dataISO >= strHoje && dataISO <= str15Dias) {
-                    if (regionalSelecionada === "Todas" || esc.regional === regionalSelecionada) {
-                        
-                        // NOVO: Cruza os dados da Escala com o Agendamento para descobrir o horário
-                        const agendamentoInfo = listaAgendamentos.find(ag => String(ag.linha) === String(esc.linhaAg));
-                        const horario = (agendamentoInfo && agendamentoInfo.horaInicio) ? agendamentoInfo.horaInicio : "--:--";
-
-                        agendados.push({
-                            dataISO: dataISO,
-                            dataBR: dataISO.split('-').reverse().join('/'),
-                            hora: horario, // NOVO: Armazena a hora encontrada
-                            regional: esc.regional,
-                            oficina: esc.oficina,
-                            instituicao: esc.instituicao,
-                            instrutores: esc.instrutoresEscalados
-                        });
-                    }
-                }
+            // 1. Filtrar as escalas
+            const filtrados = escalasFormatadas.filter(esc => {
+                const { mes, ano } = extrairMesAno(esc.dataOriginal);
+                const matchMes = (valMes === "Todos" || mes === valMes);
+                const matchAno = (valAno === "Todos" || ano === valAno);
+                const matchReg = (regionalSelecionada === "Todas" || esc.regional === regionalSelecionada);
+                return matchMes && matchAno && matchReg;
             });
 
-            if (agendados.length === 0) {
-                document.getElementById("conteudoRelatorio").style.display = "none";
-                document.getElementById("btnZap").style.display = "none";
-                document.getElementById("status").style.display = "block";
-                document.getElementById("status").innerText = `Nenhuma escala programada para os próximos 15 dias ${regionalSelecionada === "Todas" ? "" : "nesta regional"}.`;
+            if (filtrados.length === 0) {
+                document.getElementById("boxRelatorio").style.display = "none";
+                document.getElementById("msgVazio").style.display = "block";
                 return;
             }
 
+            document.getElementById("msgVazio").style.display = "none";
+            document.getElementById("boxRelatorio").style.display = "block";
+
+            // 2. Agrupar por Regional -> Oficina
             const agrupado = {};
-            agendados.forEach(item => {
-                if (!agrupado[item.regional]) agrupado[item.regional] = {};
-                if (!agrupado[item.regional][item.oficina]) agrupado[item.regional][item.oficina] = [];
-                agrupado[item.regional][item.oficina].push(item);
+            filtrados.forEach(esc => {
+                if (!agrupado[esc.regional]) agrupado[esc.regional] = {};
+                if (!agrupado[esc.regional][esc.oficina]) agrupado[esc.regional][esc.oficina] = [];
+                agrupado[esc.regional][esc.oficina].push(esc);
             });
 
-            let tituloWhatsApp = regionalSelecionada === "Todas" 
-                ? "📅 *ESCALA GERAL - PRÓXIMOS 15 DIAS* 📅\n\n" 
-                : `📅 *ESCALA ${regionalSelecionada.toUpperCase()} - PRÓXIMOS 15 DIAS* 📅\n\n`;
-
+            // 3. Construir HTML e o Texto para WhatsApp
             let htmlHTML = "";
-            let txtWPP = tituloWhatsApp;
+            let txtWPP = `📅 *ESCALA DE OFICINAS* 📅\\n\\n`;
 
-            Object.keys(agrupado).sort().forEach(regiao => {
-                if (regionalSelecionada === "Todas") {
-                    htmlHTML += `<h2 class="regional-titulo">📍 ${regiao}</h2>`;
-                    txtWPP += `📍 *${regiao.toUpperCase()}*\n`;
-                }
+            Object.keys(agrupado).sort().forEach(regional => {
+                htmlHTML += `<h2 class="regional-titulo">${regional}</h2>`;
+                txtWPP += `🏢 *${regional.toUpperCase()}*\\n\\n`;
 
-                Object.keys(agrupado[regiao]).sort().forEach(oficina => {
-                    htmlHTML += `<div class="oficina-titulo">🤖 ${oficina}</div>`;
-                    txtWPP += `🤖 _${oficina}_\n`;
+                Object.keys(agrupado[regional]).sort().forEach(oficina => {
+                    htmlHTML += `<h3 class="oficina-titulo">${oficina}</h3>`;
+                    txtWPP += `🔧 _${oficina}_\\n`;
 
-                    const lista = agrupado[regiao][oficina].sort((a, b) => a.dataISO.localeCompare(b.dataISO));
-                    
-                    lista.forEach(item => {
-                        // NOVO: Montagem da linha com Data - Hora - Escola - Equipe
-                        let linha = `🗓️ ${item.dataBR.substring(0,5)} - ${item.hora} - ${item.instituicao} - ${item.instrutores}`;
-                        
-                        // Atualiza a visualização na tela
-                        htmlHTML += `<div class="escala-item"><strong>${item.dataBR.substring(0,5)} às ${item.hora}</strong> | ${item.instituicao} <br> <span style="color:#666">Equipe: ${item.instrutores}</span></div>`;
-                        
-                        // Atualiza a string que será enviada pro WhatsApp
-                        txtWPP += `▪️ ${linha}\n`;
+                    // Ordenar por data
+                    agrupado[regional][oficina].sort((a, b) => a.dataOriginal.localeCompare(b.dataOriginal));
+
+                    agrupado[regional][oficina].forEach(item => {
+                        const dataCurta = item.dataBR.substring(0, 5); // Ex: 25/05
+                        htmlHTML += `<div class="escala-item"><strong>${dataCurta} às ${item.hora}</strong> | ${item.instituicao} <br> <span style="color:#666">Equipe: ${item.instrutores}</span></div>`;
+                        txtWPP += `▪️ ${dataCurta} às ${item.hora} | ${item.instituicao}\\n   👥 Equipe: ${item.instrutores}\\n`;
                     });
-                    txtWPP += "\n";
+                    txtWPP += `\\n`;
                 });
                 
                 if (regionalSelecionada === "Todas") {
-                    txtWPP += "➖➖➖➖➖➖➖➖➖➖\n\n";
+                    txtWPP += `➖➖➖➖➖➖➖➖➖➖\\n\\n`;
                 }
             });
 
-            textoWhatsApp = txtWPP + "💡 _Bom trabalho a todos!_";
+            textoWhatsApp = txtWPP + `💡 _Bom trabalho a todos!_`;
 
-            document.getElementById("status").style.display = "none";
             document.getElementById("conteudoRelatorio").innerHTML = htmlHTML;
-            document.getElementById("conteudoRelatorio").style.display = "block";
-            
-            document.getElementById("txtBotaoZap").innerText = regionalSelecionada === "Todas" ? "Compartilhar Relatório Geral" : `Compartilhar Escala ${regionalSelecionada}`;
-            document.getElementById("btnZap").style.display = "flex";
+            document.getElementById("txtBotaoZap").innerText = regionalSelecionada === "Todas" ? "Partilhar Relatório Geral" : `Partilhar Escala ${regionalSelecionada}`;
         }
 
         function enviarWhatsApp() {
-            const textoCodificado = encodeURIComponent(textoWhatsApp);
+            // Usa encodeURIComponent para garantir que os espaços e quebras de linha vão corretos para o URL
+            const textoCodificado = encodeURIComponent(textoWhatsApp.replace(/\\n/g, '\n'));
             window.open(`https://api.whatsapp.com/send?text=${textoCodificado}`, "_blank");
         }
     </script>

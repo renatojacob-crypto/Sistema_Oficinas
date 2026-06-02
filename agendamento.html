@@ -78,61 +78,41 @@
                 <label for="telefone">Telefone do Contato:</label>
                 <input type="tel" id="telefone" placeholder="(00) 00000-0000" required>
             </div>
+            
             <input type="hidden" id="linhaAgendamento" value="0">
             <button type="submit" id="btnEnviar">Salvar Agendamento</button>
         </form>
     </div>
-
-    <script src="config.js"></script>
+    
     <script src="auth.js"></script>
+    <script src="config.js"></script>
     <script>
-        verificarLogin();
-    </script>
-    <script>
-        // 1. Verifica se o usuário tem a chave "logado" salva no navegador
         let dadosGlobais = {};
-        console.log("URL_GAS carregada:", URL_GAS);
 
+        // INICIALIZAÇÃO - Vai buscar os dados ao Google Apps Script
         window.onload = () => {
-            fetch(URL_GAS + "?acao=dadosAgendamento&cache=" + new Date().getTime())
-                .then(res => res.text())
-                .then(texto => {
-                    console.log("Resposta bruta:", texto);
-
-                    let data;
-
-                    try {
-                        data = JSON.parse(texto);
-                    } catch (erroJson) {
-                        throw new Error("O servidor não retornou JSON válido.");
-                    }
-
-                    if (data.status !== "sucesso") {
-                        throw new Error(data.msg || "Servidor retornou erro.");
-                    }
-
-                    if (!Array.isArray(data.locais)) {
-                        throw new Error("Servidor não retornou a lista de locais.");
-                    }
-
-                    if (!Array.isArray(data.oficinas)) {
-                        throw new Error("Servidor não retornou a lista de oficinas.");
-                    }
-
+            fetch(URL_GAS)
+                .then(res => {
+                    if (!res.ok) throw new Error("Erro na resposta do servidor: " + res.status);
+                    return res.json();
+                })
+                .then(data => {
+                    if (data.erro) throw new Error(data.erro);
+                    
                     dadosGlobais = data;
-
+                    
+                    // Mapeia Regionais e Cidades (Aba Locais)
                     const regionaisUnicas = [...new Set(data.locais.map(r => r[1]))];
                     popularSelect("regional", regionaisUnicas);
-                    popularSelect("oficina", data.oficinas);
-
+                    
+                    // Mapeia Oficinas
+                    popularSelect("oficina", data.oficinas.map(o => Array.isArray(o) ? o[1] : o));
+                    
+                    // Popula o campo de Instituições para o autocompletar
                     const datalist = document.getElementById("listaInstituicoes");
                     datalist.innerHTML = "";
-
-                    if (data.agendamentos && data.agendamentos.length > 0) {
-                        const escolasUnicas = [...new Set(data.agendamentos.map(ag => ag.instituicao))]
-                            .filter(Boolean)
-                            .sort();
-
+                    if (data.instituicoes && data.instituicoes.length > 0) {
+                        const escolasUnicas = [...new Set(data.instituicoes.map(i => i[1] || i))].filter(Boolean).sort();
                         escolasUnicas.forEach(inst => {
                             datalist.innerHTML += `<option value="${inst}">`;
                         });
@@ -142,9 +122,9 @@
                     document.getElementById("formAgendamento").style.display = "block";
                 })
                 .catch(err => {
-                    document.getElementById("status").innerText = "Erro de conexão com o banco de dados: " + err.message;
+                    document.getElementById("status").innerText = "Erro de ligação à base de dados: " + err.message;
                     document.getElementById("status").style.color = "#dc2626";
-                    console.error("Erro completo:", err);
+                    console.error(err);
                 });
         };
 
@@ -187,13 +167,21 @@
             }
         }
 
+        // FUNÇÃO DE ENVIO AO SERVIDOR
         document.getElementById("formAgendamento").onsubmit = (e) => {
             e.preventDefault();
             const btn = document.getElementById("btnEnviar");
-            btn.innerText = "Salvando...";
+
+            if(document.getElementById("cargaHoraria").value === "Horário final menor que inicial") {
+                alert("Por favor, corrija os horários informados.");
+                return;
+            }
+
+            btn.innerText = "A Agendar...";
             btn.disabled = true;
 
             const payload = {
+                acao: "salvarAgendamento", // EXTREMAMENTE IMPORTANTE PARA O ROTEADOR
                 regional: document.getElementById("regional").value,
                 oficina: document.getElementById("oficina").value,
                 data: document.getElementById("dataOficina").value,
@@ -209,37 +197,29 @@
 
             fetch(URL_GAS, {
                 method: "POST",
-                headers: {
-                    "Content-Type": "text/plain;charset=utf-8"
-                },
-                body: JSON.stringify({
-                    action: "salvarAgendamento",
-                    regional: document.getElementById("regional").value,
-                    oficina: document.getElementById("oficina").value,
-                    data: document.getElementById("dataOficina").value,
-                    inicio: document.getElementById("horaInicio").value,
-                    fim: document.getElementById("horaFim").value,
-                    cidade: document.getElementById("cidade").value,
-                    carga: document.getElementById("cargaHoraria").value,
-                    instituicao: document.getElementById("instituicao").value,
-                    endereco: document.getElementById("endereco").value,
-                    contato: document.getElementById("contato").value,
-                    telefone: document.getElementById("telefone").value
-                })
+                headers: { "Content-Type": "text/plain;charset=utf-8" }, // Obriga a ignorar o CORS Preflight
+                body: JSON.stringify(payload)
             })
-            .then(res => res.json())
+            .then(response => {
+                if (!response.ok) throw new Error("Erro HTTP: " + response.status);
+                return response.json();
+            })
             .then(data => {
-                if(data.status === "sucesso") {
-                    alert("Agendado com sucesso! ID: " + data.id);
-                    location.reload();
+                if (data.status === "sucesso") {
+                    alert("Oficina agendada com sucesso! ID: " + data.id);
+                    location.reload(); 
                 } else {
                     alert("Erro no servidor: " + data.msg);
+                    btn.innerText = "Salvar Agendamento";
+                    btn.disabled = false;
                 }
             })
             .catch(err => {
-                document.getElementById("status").innerText = "Erro de conexão com o banco de dados: " + err.message;
-                document.getElementById("status").style.color = "#dc2626";
-                console.error("Erro completo:", err);
+                // Remove a "cegueira" do no-cors. Mostra qual é o erro exato.
+                alert("Falha na ligação: " + err.message); 
+                console.error(err);
+                btn.innerText = "Salvar Agendamento";
+                btn.disabled = false;
             });
         };
     </script>

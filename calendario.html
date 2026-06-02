@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style.css">
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
     <style>
+        .container { max-width: 1200px; margin: 0 auto; padding: 20px; }
         #calendar { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
         .filter-container { 
             background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px;
@@ -17,37 +18,30 @@
         .filter-group label { font-weight: 600; font-size: 13px; color: var(--text-color); }
         .filter-group select { padding: 8px; border-radius: 6px; border: 1px solid #ccc; }
         
-        /* Ajuste do botão voltar com fundo branco */
-        .voltar-container {
-            background: white;
-            padding: 10px 15px;
-            border-radius: 8px;
-            display: inline-block;
-            margin-bottom: 15px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-        }
+        .fc-event { cursor: pointer; transition: opacity 0.2s; }
+        .fc-event:hover { opacity: 0.8; }
+        .voltar-container { margin-bottom: 15px; }
     </style>
 </head>
 <body>
 
-    <div class="container" style="max-width: 1200px; background-color: transparent; box-shadow: none; margin-top: 20px;">
-        
+    <div class="container">
         <div class="voltar-container">
             <a href="siscontrol.html" style="text-decoration: none; color: var(--primary-color); font-weight: 700;">⬅️ Voltar ao Início</a>
         </div>
-
-        <header class="form-header" style="background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08);">
-            <h1 style="color: var(--primary-color); margin: 0;">🗓️ Cronograma de Oficinas</h1>
+        
+        <header class="form-header" style="margin-bottom: 20px;">
+            <h1 style="color: var(--primary-color); margin: 0;">Calendário de Oficinas</h1>
         </header>
 
         <div class="filter-container">
             <div class="filter-group">
                 <label>Status:</label>
                 <select id="filtroStatus" onchange="aplicarFiltros()">
-                    <option value="Todos">Exibir Tudo</option>
-                    <option value="Agendada">Agendadas</option>
-                    <option value="Realizada">Realizadas</option>
-                    <option value="Cancelada">Canceladas</option>
+                    <option value="Todos">Todos</option>
+                    <option value="Agendada">Agendada</option>
+                    <option value="Realizada">Realizada</option>
+                    <option value="Cancelada">Cancelada</option>
                 </select>
             </div>
             <div class="filter-group">
@@ -62,78 +56,130 @@
                     <option value="Todas">Todas</option>
                 </select>
             </div>
+            <button onclick="aplicarFiltros()" style="padding: 9px 15px; background: var(--primary-color); color:white; border:none; border-radius:6px; cursor:pointer;">Limpar / Atualizar</button>
         </div>
 
-        <div id="status" class="loading" style="background: white; border-radius: 12px; padding: 40px;">Sincronizando agendamentos...</div>
-        <div id="calendar" style="display:none;"></div>
+        <div id="status" style="text-align: center; font-weight: bold; padding: 20px;">A carregar a agenda...</div>
+        
+        <div id="calendar" style="display: none;"></div>
     </div>
-
+    <script src="auth.js"></script>
     <script src="config.js"></script>
     <script>
-        let todosEventos = []; 
-        let calendar; 
+        let calendar;
+        let todosEventos = [];
 
         window.onload = () => {
             fetch(URL_GAS)
-                .then(res => res.json())
+                .then(res => {
+                    if (!res.ok) throw new Error("Erro de resposta do servidor: " + res.status);
+                    return res.json();
+                })
                 .then(data => {
-                    // Mapeia usando o linhaAg (ID Único da Planilha) para garantir correspondência exata
-                    const mapaInfo = {};
-                    (data.agendamentosDashboard || []).forEach(item => {
-                        // Criamos uma chave baseada na data + oficina + linha, se disponível
-                        mapaInfo[item.data + "_" + item.oficina] = item;
-                    });
+                    if (data.status === "erro" || data.erro) throw new Error(data.msg || data.erro);
 
-                    todosEventos = (data.agendaCompleta || []).map(ev => {
-                        const info = mapaInfo[ev.start.split('T')[0] + "_" + ev.oficina] || {};
+                    // 1. Transformar a nova lista de "agendamentos" no formato exigido pelo FullCalendar
+                    todosEventos = (data.agendamentos || []).map(ag => {
+                        
+                        // Montar as strings de Data/Hora (Ex: "2026-05-25T10:00:00")
+                        // O FullCalendar exige um "T" a separar a data da hora
+                        let dataInicioFormato = ag.data;
+                        if (ag.inicio) dataInicioFormato += `T${ag.inicio}`;
+                        
+                        let dataFimFormato = ag.data;
+                        if (ag.fim) dataFimFormato += `T${ag.fim}`;
+
+                        // Definir as cores com base no Status
+                        let corEvento = '#3b82f6'; // Azul = Agendada
+                        if (ag.status === 'Realizada') corEvento = '#10b981'; // Verde
+                        else if (ag.status && ag.status.includes('Cancelada')) corEvento = '#ef4444'; // Vermelho
+
                         return {
-                            ...ev,
+                            title: `${ag.oficina} - ${ag.inst}`, // Ex: "Oficina Maker - EMEF Faria"
+                            start: dataInicioFormato,
+                            end: dataFimFormato,
+                            color: corEvento, // Aplica a cor dinamicamente
                             extendedProps: {
-                                status: ev.status,
-                                regional: info.regional || "Sem Regional",
-                                oficina: ev.oficina
+                                idAgendamento: ag.id,
+                                status: ag.status || 'Agendada',
+                                regional: ag.regional,
+                                oficina: ag.oficina,
+                                cidade: ag.cidade,
+                                instituicao: ag.inst
                             }
                         };
                     });
 
-                    // Popular filtros
-                    const regs = [...new Set(todosEventos.map(e => e.extendedProps.regional))].filter(r => r !== "Sem Regional");
-                    const ofis = [...new Set(todosEventos.map(e => e.extendedProps.oficina))];
-                    
-                    regs.forEach(r => document.getElementById('filtroRegional').innerHTML += `<option value="${r}">${r}</option>`);
-                    ofis.forEach(o => document.getElementById('filtroOficina').innerHTML += `<option value="${o}">${o}</option>`);
+                    // 2. Extrair listas únicas para popular os Selects (Filtros)
+                    const regionaisUnicas = [...new Set(todosEventos.map(ev => ev.extendedProps.regional))].filter(Boolean).sort();
+                    const oficinasUnicas = [...new Set(todosEventos.map(ev => ev.extendedProps.oficina))].filter(Boolean).sort();
 
+                    regionaisUnicas.forEach(r => document.getElementById('filtroRegional').innerHTML += `<option value="${r}">${r}</option>`);
+                    oficinasUnicas.forEach(o => document.getElementById('filtroOficina').innerHTML += `<option value="${o}">${o}</option>`);
+
+                    // 3. Renderizar o calendário
                     renderizarCalendario(todosEventos);
+                })
+                .catch(err => {
+                    const statusEl = document.getElementById("status");
+                    statusEl.innerText = "Erro ao carregar a agenda: " + err.message;
+                    statusEl.style.color = "#dc2626";
+                    console.error(err);
                 });
         };
 
-        function renderizarCalendario(eventos) {
+        function renderizarCalendario(eventosParaMostrar) {
             document.getElementById("status").style.display = "none";
             const calEl = document.getElementById('calendar');
             calEl.style.display = "block";
 
+            // Se o calendário já existir, apenas destrói a instância anterior antes de criar uma nova
+            if (calendar) {
+                calendar.destroy();
+            }
+
             calendar = new FullCalendar.Calendar(calEl, {
-                initialView: 'dayGridMonth', locale: 'pt-br',
-                events: eventos,
-                eventClick: info => alert(`Oficina: ${info.event.title}\nStatus: ${info.event.extendedProps.status}`)
+                initialView: 'dayGridMonth', 
+                locale: 'pt-br',
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,timeGridDay'
+                },
+                events: eventosParaMostrar,
+                // Ao clicar num evento, exibe um alerta detalhado
+                eventClick: function(info) {
+                    const p = info.event.extendedProps;
+                    const detalhes = `
+📍 OFICINA: ${p.oficina}
+🏢 INSTITUIÇÃO: ${p.instituicao} (${p.cidade} - ${p.regional})
+📌 STATUS: ${p.status}
+🆔 ID DO AGENDAMENTO: ${p.idAgendamento}
+                    `;
+                    alert(detalhes.trim());
+                }
             });
             calendar.render();
         }
 
+        // Função chamada sempre que um "select" do filtro é alterado
         function aplicarFiltros() {
-            const s = document.getElementById("filtroStatus").value;
-            const r = document.getElementById("filtroRegional").value;
-            const o = document.getElementById("filtroOficina").value;
+            const valStatus = document.getElementById("filtroStatus").value;
+            const valRegional = document.getElementById("filtroRegional").value;
+            const valOficina = document.getElementById("filtroOficina").value;
 
+            // Filtra o Array original
             const filtrados = todosEventos.filter(ev => {
-                const matchS = (s === "Todos" || ev.extendedProps.status === s);
-                const matchR = (r === "Todas" || ev.extendedProps.regional === r);
-                const matchO = (o === "Todas" || ev.extendedProps.oficina === o);
-                return matchS && matchR && matchO;
+                const props = ev.extendedProps;
+                const matchStatus = (valStatus === "Todos" || (valStatus === "Cancelada" ? props.status.includes("Cancelada") : props.status === valStatus));
+                const matchRegional = (valRegional === "Todas" || props.regional === valRegional);
+                const matchOficina = (valOficina === "Todas" || props.oficina === valOficina);
+                
+                return matchStatus && matchRegional && matchOficina;
             });
 
-            calendar.removeAllEvents();
-            calendar.addEventSource(filtrados);
+            // Passa a lista filtrada para o calendário renderizar
+            renderizarCalendario(filtrados);
         }
     </script>
 </body>

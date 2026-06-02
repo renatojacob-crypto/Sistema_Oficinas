@@ -2,195 +2,256 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Comparativo Financeiro de Oficinas</title>
     <link rel="stylesheet" href="style.css">
     <style>
+        .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
         .card-branco { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 20px; }
         
-        .filtros-grid { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 15px; align-items: end; background: #f9fafb; padding: 20px; border-radius: 8px; border: 1px solid #e5e7eb; margin-bottom: 25px; }
+        .filtros-grid { 
+            display: grid; grid-template-columns: 1fr 1fr 1fr 1fr auto; gap: 15px; 
+            align-items: end; background: #f9fafb; padding: 20px; border-radius: 8px; 
+            border: 1px solid #e5e7eb; margin-bottom: 25px; 
+        }
         @media (max-width: 900px) { .filtros-grid { grid-template-columns: 1fr 1fr; } }
         @media (max-width: 500px) { .filtros-grid { grid-template-columns: 1fr; } }
         
-        .styled-table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 14px; text-align: center; }
+        .form-group label { font-size: 13px; font-weight: 600; color: #4b5563; margin-bottom: 5px; display: block; }
+        .form-group select { 
+            width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; 
+            background: white; outline: none; font-family: inherit; font-size: 14px;
+        }
+
+        .btn-filtrar {
+            background-color: var(--primary-color); color: white; border: none; 
+            padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; 
+            transition: background 0.2s; height: 40px;
+        }
+        .btn-filtrar:hover { background-color: #0f172a; }
+
+        .styled-table { width: 100%; border-collapse: collapse; text-align: center; font-size: 14px; }
         .styled-table thead tr { background-color: var(--primary-color); color: #ffffff; font-weight: bold; }
-        .styled-table th, .styled-table td { padding: 12px 15px; border-bottom: 1px solid #dddddd; vertical-align: middle; }
-        .styled-table tbody tr:hover { background-color: #f8fafc; }
+        .styled-table th, .styled-table td { padding: 12px 15px; border-bottom: 1px solid #e5e7eb; }
+        .styled-table tbody tr:nth-of-type(even) { background-color: #f9fafb; }
+        .styled-table tbody tr:hover { background-color: #f1f5f9; }
         
-        .texto-esq { text-align: left; font-weight: 600; color: #1f2937; }
-        .texto-bold { font-weight: bold; }
+        .texto-esq { text-align: left; }
+        .texto-bold { font-weight: 700; }
         
-        /* Cores Dinâmicas */
-        .cor-verde { color: #16a34a; font-weight: 900; }
-        .cor-vermelha { color: #dc2626; font-weight: 900; }
-        .cor-azul { color: #2563eb; font-weight: 900; }
+        .cor-verde { color: #10b981; font-weight: bold; }
+        .cor-vermelha { color: #ef4444; font-weight: bold; }
+        .cor-azul { color: #3b82f6; font-weight: bold; }
         
-        .badge { display: inline-block; padding: 6px 12px; border-radius: 20px; font-size: 12px; font-weight: bold; }
-        .bg-verde { background-color: #dcfce7; color: #166534; border: 1px solid #86efac; }
-        .bg-vermelha { background-color: #fee2e2; color: #991b1b; border: 1px solid #fca5a5; }
-        .bg-azul { background-color: #dbeafe; color: #1e40af; border: 1px solid #93c5fd; }
+        .badge { padding: 4px 10px; border-radius: 20px; font-size: 12px; font-weight: 600; display: inline-block; }
+        .bg-verde { background-color: #d1fae5; color: #065f46; }
+        .bg-vermelha { background-color: #fee2e2; color: #991b1b; }
+        .bg-azul { background-color: #dbeafe; color: #1e40af; }
         
-        .btn-filtrar { height: 42px; padding: 0 25px; background: var(--primary-color); color: white; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; transition: 0.2s; width: 100%; }
-        .btn-filtrar:hover { filter: brightness(0.9); }
+        #msgVazio { text-align: center; color: #6b7280; font-style: italic; padding: 30px; }
     </style>
 </head>
 <body>
-    <div class="container" style="max-width: 1200px;">
-        <a href="siscontrol.html" style="text-decoration: none; color: var(--primary-color); font-weight: 700;">← Voltar ao Início</a>
-        
-        <header class="form-header" style="margin-top: 15px;">
-            <h1 style="color: var(--primary-color); margin: 0;">📉 Dashboard Financeiro</h1>
-            <p style="margin-top: 5px; color: #6b7280;">Comparativo: Orçamento Previsto vs. Gastos Realizados</p>
+
+    <div class="container">
+        <header class="form-header" style="margin-bottom: 20px; text-align: center;">
+            <a href="siscontrol.html" style="text-decoration: none; color: var(--primary-color); font-size: 14px; font-weight: 600; display: block; margin-bottom: 10px;">← Voltar ao Início</a>
+            <h1 style="color: var(--primary-color); margin: 0;">Comparativo Financeiro</h1>
+            <p style="color: #6b7280; font-size: 14px; margin-top: 5px;">Previsto vs Realizado por Oficina e Regional</p>
         </header>
 
-        <div class="card-branco">
+        <div id="status" style="text-align: center; font-weight: bold; padding: 20px; color: #4b5563;">A carregar dados financeiros do servidor...</div>
+
+        <div id="conteudoPrincipal" style="display: none;">
             
             <div class="filtros-grid">
-                <div class="form-group" style="margin: 0;">
-                    <label>Data Início (Oficina):</label>
-                    <input type="date" id="dataInicio" style="margin: 0; padding: 10px;">
+                <div class="form-group">
+                    <label for="filtroMes">Mês:</label>
+                    <select id="filtroMes">
+                        <option value="Todos">Todos</option>
+                        <option value="1">Janeiro</option>
+                        <option value="2">Fevereiro</option>
+                        <option value="3">Março</option>
+                        <option value="4">Abril</option>
+                        <option value="5">Maio</option>
+                        <option value="6">Junho</option>
+                        <option value="7">Julho</option>
+                        <option value="8">Agosto</option>
+                        <option value="9">Setembro</option>
+                        <option value="10">Outubro</option>
+                        <option value="11">Novembro</option>
+                        <option value="12">Dezembro</option>
+                    </select>
                 </div>
-                <div class="form-group" style="margin: 0;">
-                    <label>Data Fim (Oficina):</label>
-                    <input type="date" id="dataFim" style="margin: 0; padding: 10px;">
+                <div class="form-group">
+                    <label for="filtroAno">Ano:</label>
+                    <select id="filtroAno">
+                        <option value="Todos">Todos</option>
+                    </select>
                 </div>
-                <div class="form-group" style="margin: 0;">
-                    <label>Regional:</label>
-                    <select id="filtroRegional" style="margin: 0; padding: 10px;">
+                <div class="form-group">
+                    <label for="filtroRegional">Regional:</label>
+                    <select id="filtroRegional">
                         <option value="Todas">Todas</option>
                     </select>
                 </div>
-                <div class="form-group" style="margin: 0;">
-                    <label>Oficina:</label>
-                    <select id="filtroOficina" style="margin: 0; padding: 10px;">
+                <div class="form-group">
+                    <label for="filtroOficina">Oficina:</label>
+                    <select id="filtroOficina">
                         <option value="Todas">Todas</option>
                     </select>
                 </div>
-                <button class="btn-filtrar" onclick="gerarRelatorio()">Filtrar Dados</button>
+                <button class="btn-filtrar" onclick="gerarTabela()">Atualizar Tabela</button>
             </div>
 
-            <div id="status" class="loading">Carregando módulos financeiros do banco...</div>
-
-            <div style="overflow-x: auto;">
-                <table class="styled-table" id="tabelaComparativa" style="display: none;">
+            <div class="card-branco">
+                <table class="styled-table" id="tabelaComparativa">
                     <thead>
                         <tr>
                             <th class="texto-esq">Regional</th>
                             <th class="texto-esq">Oficina</th>
-                            <th>Gastos Previstos</th>
-                            <th>Gastos Realizados</th>
-                            <th>Diferença (Real - Prev)</th>
-                            <th>Status Financeiro</th>
+                            <th>Total Previsto (R$)</th>
+                            <th>Total Realizado (R$)</th>
+                            <th>Diferença (R$)</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody id="corpoTabela">
                         </tbody>
                 </table>
+                <div id="msgVazio" style="display: none;">Nenhum dado financeiro encontrado para os filtros selecionados.</div>
             </div>
-            
-            <p id="msgVazio" style="display: none; text-align: center; color: #6b7280; padding: 20px; font-size: 16px;">Nenhum dado financeiro encontrado para os filtros selecionados.</p>
         </div>
+
     </div>
-
-    <script>
-        if (sessionStorage.getItem("logado") !== "sim") {
-            window.location.href = "index.html"; 
-        }
-    </script>
-
+    <script src="auth.js"></script>
     <script src="config.js"></script>
     <script>
-        let dadosGlobais = {};
+        let previsoesGlobais = [];
+        let gastosGlobais = [];
 
         window.onload = () => {
             fetch(URL_GAS)
-                .then(res => res.json())
+                .then(res => {
+                    if (!res.ok) throw new Error("Erro de resposta do servidor: " + res.status);
+                    return res.json();
+                })
                 .then(data => {
-                    dadosGlobais = data;
-                    
-                    // Configura datas padrão (Últimos 30 dias até hoje por padrão)
-                    const hoje = new Date();
-                    const trintaDiasAtras = new Date();
-                    trintaDiasAtras.setDate(hoje.getDate() - 30);
-                    
-                    document.getElementById("dataInicio").value = formatarDataInput(trintaDiasAtras);
-                    document.getElementById("dataFim").value = formatarDataInput(hoje);
+                    if (data.status === "erro" || data.erro) throw new Error(data.msg || data.erro);
 
-                    // Descobre todas as Regionais e Oficinas únicas registradas no financeiro
-                    let regionaisSet = new Set();
-                    let oficinasSet = new Set();
+                    previsoesGlobais = data.previsoes || [];
+                    gastosGlobais = data.gastos || [];
 
-                    (data.previsoes || []).forEach(p => { regionaisSet.add(p.regional); oficinasSet.add(p.oficina); });
-                    (data.gastos || []).forEach(g => { regionaisSet.add(g.regional); oficinasSet.add(g.oficina); });
+                    // Extrair Regionais e Oficinas únicas de ambas as listas
+                    // Índices nas planilhas: Regional = 2, Oficina = 3
+                    const regionais = new Set();
+                    const oficinas = new Set();
+                    const anos = new Set();
 
-                    const selectReg = document.getElementById("filtroRegional");
-                    [...regionaisSet].filter(Boolean).sort().forEach(reg => {
-                        selectReg.innerHTML += `<option value="${reg}">${reg}</option>`;
+                    [...previsoesGlobais, ...gastosGlobais].forEach(linha => {
+                        if (linha[2]) regionais.add(linha[2]);
+                        if (linha[3]) oficinas.add(linha[3]);
+                        
+                        // Extrair ano para popular o filtro (considera Data na coluna 5 para Previsões ou 4 para Gastos)
+                        const dataOficina = linha[5] || linha[4] || ""; 
+                        const ano = extrairMesAno(dataOficina).ano;
+                        if(ano) anos.add(ano);
                     });
 
-                    const selectOfi = document.getElementById("filtroOficina");
-                    [...oficinasSet].filter(Boolean).sort().forEach(ofi => {
-                        selectOfi.innerHTML += `<option value="${ofi}">${ofi}</option>`;
+                    popularSelect("filtroRegional", [...regionais].sort());
+                    popularSelect("filtroOficina", [...oficinas].sort());
+                    
+                    const selectAno = document.getElementById("filtroAno");
+                    [...anos].sort().reverse().forEach(ano => {
+                        selectAno.innerHTML += `<option value="${ano}">${ano}</option>`;
                     });
+                    
+                    // Se houver anos, seleciona o atual
+                    const anoAtual = new Date().getFullYear().toString();
+                    if(anos.has(anoAtual)) selectAno.value = anoAtual;
 
-                    gerarRelatorio(); 
+                    document.getElementById("status").style.display = "none";
+                    document.getElementById("conteudoPrincipal").style.display = "block";
+
+                    gerarTabela();
                 })
                 .catch(err => {
-                    document.getElementById("status").innerText = "Erro ao conectar com o banco de dados financeiro.";
-                    document.getElementById("status").style.color = "red";
+                    document.getElementById("status").innerText = "Falha ao carregar os dados: " + err.message;
+                    document.getElementById("status").style.color = "#dc2626";
+                    console.error(err);
                 });
         };
 
-        function formatarDataInput(dataObj) {
-            const y = dataObj.getFullYear();
-            const m = String(dataObj.getMonth() + 1).padStart(2, '0');
-            const d = String(dataObj.getDate()).padStart(2, '0');
-            return `${y}-${m}-${d}`;
+        function popularSelect(id, array) {
+            const select = document.getElementById(id);
+            array.forEach(item => {
+                select.innerHTML += `<option value="${item}">${item}</option>`;
+            });
+        }
+
+        function extrairMesAno(dataStr) {
+            if (!dataStr) return { mes: "", ano: "" };
+            // Lidar com formato DD/MM/YYYY ou YYYY-MM-DD
+            if (dataStr.includes('/')) {
+                const p = dataStr.split('/');
+                if (p.length === 3) return { mes: parseInt(p[1]).toString(), ano: p[2] };
+            } else if (dataStr.includes('-')) {
+                const p = dataStr.split('-');
+                if (p.length >= 2) return { mes: parseInt(p[1]).toString(), ano: p[0] };
+            }
+            return { mes: "", ano: "" };
+        }
+
+        function parseMoeda(valorString) {
+            if (!valorString) return 0;
+            if (typeof valorString === 'number') return valorString;
+            // Remove R$, pontos de milhar e troca vírgula por ponto
+            let limpo = valorString.toString().replace(/R\$\s?/g, '').replace(/\./g, '').replace(',', '.');
+            return parseFloat(limpo) || 0;
         }
 
         function formatarMoeda(valor) {
             return valor.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
         }
 
-        function gerarRelatorio() {
-            document.getElementById("status").style.display = "none";
-            
-            const dtInicio = document.getElementById("dataInicio").value;
-            const dtFim = document.getElementById("dataFim").value;
-            const regFiltro = document.getElementById("filtroRegional").value;
-            const ofiFiltro = document.getElementById("filtroOficina").value;
+        function gerarTabela() {
+            const valMes = document.getElementById("filtroMes").value;
+            const valAno = document.getElementById("filtroAno").value;
+            const valRegional = document.getElementById("filtroRegional").value;
+            const valOficina = document.getElementById("filtroOficina").value;
 
-            if (!dtInicio || !dtFim) {
-                alert("Por favor, selecione um período de datas válido."); return;
-            }
+            // Objeto para agrupar os dados { "Regional||Oficina": { previsto: 0, realizado: 0 } }
+            const agrupado = {};
 
-            // Dicionário para agrupar tudo pela chave "Regional|Oficina"
-            let mapaFinanceiro = {};
+            // 1. Processar Previsões (Índices: 2=Regional, 3=Oficina, 5=Data, 18=TotalGeral)
+            previsoesGlobais.forEach(p => {
+                const reg = p[2], ofi = p[3], dt = p[5], total = parseMoeda(p[18]);
+                const { mes, ano } = extrairMesAno(dt);
 
-            // 1. Processa as Previsões
-            (dadosGlobais.previsoes || []).forEach(p => {
-                if (p.dataOficina >= dtInicio && p.dataOficina <= dtFim) {
-                    if (regFiltro !== "Todas" && p.regional !== regFiltro) return;
-                    if (ofiFiltro !== "Todas" && p.oficina !== ofiFiltro) return;
-
-                    let chave = `${p.regional}|${p.oficina}`;
-                    if (!mapaFinanceiro[chave]) {
-                        mapaFinanceiro[chave] = { regional: p.regional, oficina: p.oficina, previsto: 0, realizado: 0 };
-                    }
-                    mapaFinanceiro[chave].previsto += p.total;
+                if ((valMes === "Todos" || mes === valMes) &&
+                    (valAno === "Todos" || ano === valAno) &&
+                    (valRegional === "Todas" || reg === valRegional) &&
+                    (valOficina === "Todas" || ofi === valOficina)) {
+                    
+                    const chave = `${reg}||${ofi}`;
+                    if (!agrupado[chave]) agrupado[chave] = { regional: reg, oficina: ofi, previsto: 0, realizado: 0 };
+                    agrupado[chave].previsto += total;
                 }
             });
 
-            // 2. Processa os Gastos Realizados
-            (dadosGlobais.gastos || []).forEach(g => {
-                if (g.dataOficina >= dtInicio && g.dataOficina <= dtFim) {
-                    if (regFiltro !== "Todas" && g.regional !== regFiltro) return;
-                    if (ofiFiltro !== "Todas" && g.oficina !== ofiFiltro) return;
+            // 2. Processar Gastos (Índices: 2=Regional, 3=Oficina, 4=Data, 7=ValorTotal)
+            gastosGlobais.forEach(g => {
+                const reg = g[2], ofi = g[3], dt = g[4], total = parseMoeda(g[7]);
+                const { mes, ano } = extrairMesAno(dt);
 
-                    let chave = `${g.regional}|${g.oficina}`;
-                    if (!mapaFinanceiro[chave]) {
-                        mapaFinanceiro[chave] = { regional: g.regional, oficina: g.oficina, previsto: 0, realizado: 0 };
-                    }
-                    mapaFinanceiro[chave].realizado += g.total;
+                if ((valMes === "Todos" || mes === valMes) &&
+                    (valAno === "Todos" || ano === valAno) &&
+                    (valRegional === "Todas" || reg === valRegional) &&
+                    (valOficina === "Todas" || ofi === valOficina)) {
+                    
+                    const chave = `${reg}||${ofi}`;
+                    if (!agrupado[chave]) agrupado[chave] = { regional: reg, oficina: ofi, previsto: 0, realizado: 0 };
+                    agrupado[chave].realizado += total;
                 }
             });
 
@@ -198,39 +259,25 @@
             tbody.innerHTML = "";
             let temDados = false;
 
-            // Transforma o dicionário em Array e ordena por Regional, depois por Oficina
-            const listaResultados = Object.values(mapaFinanceiro).sort((a, b) => {
-                if (a.regional === b.regional) return a.oficina.localeCompare(b.oficina);
-                return a.regional.localeCompare(b.regional);
-            });
-
-            listaResultados.forEach(item => {
-                // Se tudo for zero, pula a linha (evita lixo no relatorio)
-                if (item.previsto === 0 && item.realizado === 0) return;
-                
+            // 3. Renderizar Tabela
+            Object.values(agrupado).forEach(item => {
                 temDados = true;
-                
-                // Cálculo exigido: Gastos Realizados menos Gastos Previstos
                 const diferenca = item.realizado - item.previsto;
                 
-                // Variáveis para cor e texto
-                let corClasse = "";
-                let badgeClasse = "";
-                let mensagem = "";
+                let corClasse = "", badgeClasse = "", mensagem = "";
 
-                // Regras de Negócio do Status
-                if (diferenca < -0.01) { // Ligeira margem para evitar erro de arredondamento de centavos
+                if (diferenca < -0.01) { // Gastou menos que o previsto
                     corClasse = "cor-verde";
                     badgeClasse = "bg-verde";
-                    mensagem = "Oficina Abaixo do Orçamento";
-                } else if (diferenca > 0.01) {
+                    mensagem = "Oficina Econômica";
+                } else if (diferenca > 0.01) { // Gastou mais que o previsto
                     corClasse = "cor-vermelha";
                     badgeClasse = "bg-vermelha";
-                    mensagem = "Oficina Acima do Orçamento";
-                } else {
+                    mensagem = "Acima do Orçamento";
+                } else { // Cravou o orçamento
                     corClasse = "cor-azul";
                     badgeClasse = "bg-azul";
-                    mensagem = "Oficina Dentro do Orçamento";
+                    mensagem = "Dentro do Orçamento";
                 }
 
                 const tr = document.createElement("tr");
@@ -245,6 +292,7 @@
                 tbody.appendChild(tr);
             });
 
+            // Controle de Exibição
             if (temDados) {
                 document.getElementById("tabelaComparativa").style.display = "table";
                 document.getElementById("msgVazio").style.display = "none";
