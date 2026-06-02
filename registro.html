@@ -141,7 +141,7 @@
                     [...regionais].sort().forEach(r => document.getElementById("fRegional").innerHTML += `<option value="${r}">${r}</option>`);
                     [...oficinas].sort().forEach(o => document.getElementById("fOficina").innerHTML += `<option value="${o}">${o}</option>`);
 
-                    // Preencher Menus Suspensos Dinâmicos (Assume-se que o Código.gs envia estes arrays)
+                    // Preencher Menus Suspensos Dinâmicos
                     popularSelectDinamico("turno", data.turnos || []);
                     popularSelectDinamico("turma", data.turmas || []);
                     popularSelectDinamico("segmento", data.segmentos || []);
@@ -157,12 +157,19 @@
                 });
         };
 
+        // FUNÇÃO CORRIGIDA PARA PEGAR A COLUNA B (NOME)
         function popularSelectDinamico(id, array) {
             const select = document.getElementById(id);
             select.innerHTML = '<option value="">Selecione...</option>';
             array.forEach(item => {
-                // Se for um array (vazio da planilha), pega o índice 0, senão pega direto
-                const valor = Array.isArray(item) ? item[0] : item; 
+                let valor = "";
+                if (Array.isArray(item)) {
+                    // Se o array tiver 2 ou mais colunas, pega o índice 1 (Coluna B). Se não, pega o 0 (Coluna A).
+                    valor = item.length > 1 ? item[1] : item[0]; 
+                } else {
+                    valor = item;
+                }
+                
                 if (valor) select.innerHTML += `<option value="${valor}">${valor}</option>`;
             });
         }
@@ -221,7 +228,6 @@
             document.getElementById("statusFinal").value = "";
             alternarCampos();
 
-            // Filtrar e popular a checkbox de instrutores baseado na regional da oficina
             const containerInst = document.getElementById("listaInstrutores");
             containerInst.innerHTML = "";
             const instrutoresDaRegional = (dadosGlobais.instrutores || []).filter(i => 
@@ -261,7 +267,6 @@
             }
         }
 
-        // Função Assíncrona para converter as imagens em Base64
         async function prepararFotos() {
             const files = document.getElementById("fotosInput").files;
             const fotoArray = [];
@@ -309,14 +314,13 @@
                 dataOficina: agendamentoSelecionado.data,
                 cidade: agendamentoSelecionado.cidade,
                 instituicao: agendamentoSelecionado.inst,
-                // Novos campos estruturados:
                 turno: document.getElementById("turno").value,
                 alunos: document.getElementById("alunos").value,
                 turma: document.getElementById("turma").value,
                 segmento: document.getElementById("segmento").value,
                 acompanhantes: document.getElementById("acompanhantes").value,
                 instrutores: instrutoresSelecionados,
-                fotos: fotosProcessadas // As fotos vão convertidas e prontas para o script
+                fotos: fotosProcessadas
             };
 
             fetch(URL_GAS, {
