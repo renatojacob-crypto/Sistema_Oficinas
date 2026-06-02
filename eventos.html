@@ -170,13 +170,23 @@
                 return;
             }
 
-            // Filtra cruzando a regional do instrutor com as que foram marcadas
+            // Filtra com validação inteligente de palavras-chave (resolve divergências de digitação)
             const instrutoresFiltrados = instrutoresGlobais.filter(i => {
-                const regInstrutor = i.length > 3 ? i[3] : ""; // Coluna D no array costuma ser o índice 3
-                return regionaisSelecionadas.some(regSelecionada => 
-                    regInstrutor === regSelecionada || 
-                    (regSelecionada.includes("Governador") && regInstrutor.includes("Gov."))
-                );
+                const regInstrutor = (i.length > 3 ? i[3] : "").toLowerCase();
+
+                return regionaisSelecionadas.some(regSelecionada => {
+                    const rSel = regSelecionada.toLowerCase();
+
+                    // 1. Verificação exata
+                    if (rSel === regInstrutor) return true;
+
+                    // 2. Verificação flexível (Apanha "Gov.", "Governador", "Vitoria", etc.)
+                    if (rSel.includes("valadares") && regInstrutor.includes("valadares")) return true;
+                    if ((rSel.includes("vitória") || rSel.includes("vitoria")) && (regInstrutor.includes("vitória") || regInstrutor.includes("vitoria"))) return true;
+                    if (rSel.includes("itabira") && regInstrutor.includes("itabira")) return true;
+
+                    return false;
+                });
             });
 
             if (instrutoresFiltrados.length === 0) {
