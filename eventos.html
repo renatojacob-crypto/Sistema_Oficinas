@@ -9,38 +9,56 @@
         .card-branco { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 20px; }
         .form-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; margin-bottom: 15px; }
         @media (max-width: 600px) { .form-row { grid-template-columns: 1fr; } }
-        .checkbox-group { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-top: 10px; padding: 15px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; }
+        
+        .checkbox-group { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 10px; margin-top: 5px; padding: 15px; background: #f9fafb; border-radius: 8px; border: 1px solid #e5e7eb; }
+        .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+        
+        .readonly-field { background-color: #f3f4f6 !important; color: #4b5563 !important; font-weight: 600; border: 1px solid #d1d5db !important; cursor: not-allowed; }
+        
+        .form-group label { font-size: 13px; font-weight: 600; color: #4b5563; margin-bottom: 5px; display: block; }
+        .form-group select, .form-group input { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+        
+        .btn-acao {
+            background-color: var(--primary-color); color: white; border: none; 
+            padding: 15px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; 
+            width: 100%; margin-top: 20px; font-size: 15px; transition: background 0.2s;
+        }
+        .btn-acao:hover { background-color: #0f172a; }
     </style>
 </head>
 <body>
 
-    <div class="container">
+    <div class="container" style="max-width: 900px;">
         <header class="form-header" style="text-align: center;">
             <a href="siscontrol.html" style="text-decoration: none; color: var(--primary-color); font-size: 14px; font-weight: 600;">← Voltar ao Início</a>
             <h1>Registro de Eventos</h1>
         </header>
 
-        <div id="status" style="text-align: center; padding: 20px;">A preparar ambiente...</div>
+        <div id="status" style="text-align: center; font-weight: bold; padding: 20px; color: #4b5563;">A preparar ambiente...</div>
 
         <form id="formEventos" class="card-branco" style="display:none;">
+            
             <div class="form-row">
                 <div class="form-group">
                     <label>Tipo de Encontro:</label>
                     <select id="tipoEncontro" required>
+                        <option value="">Selecione...</option>
                         <option value="Reunião">Reunião</option>
-                        <option value="Treinamento">Treinamento</option>
-                        <option value="Workshop">Workshop</option>
+                        <option value="Treinamento Vale">Treinamento Vale</option>
+                        <option value="Treinamento YXZ">Treinamento YXZ</option>
+                        <option value="Auxílio Educador SócioAmbiental">Auxílio Educador SócioAmbiental</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label>Modalidade:</label>
                     <select id="modalidade" required>
+                        <option value="">Selecione...</option>
                         <option value="Remoto">Remoto</option>
                         <option value="Presencial">Presencial</option>
                     </select>
                 </div>
                 <div class="form-group">
-                    <label>Data:</label>
+                    <label>Data do Evento:</label>
                     <input type="date" id="dataEvento" required>
                 </div>
             </div>
@@ -48,22 +66,33 @@
             <div class="form-row">
                 <div class="form-group">
                     <label>Hora Início:</label>
-                    <input type="time" id="horaInicio" required>
+                    <input type="time" id="horaInicio" onchange="calcularCargaHoraria()" required>
                 </div>
                 <div class="form-group">
                     <label>Hora Término:</label>
-                    <input type="time" id="horaTermino" required>
+                    <input type="time" id="horaTermino" onchange="calcularCargaHoraria()" required>
                 </div>
                 <div class="form-group">
-                    <label>Regional:</label>
-                    <select id="filtroRegional" required></select>
+                    <label>Carga Horária:</label>
+                    <input type="text" id="cargaHoraria" class="readonly-field" readonly placeholder="00h 00m" required>
                 </div>
             </div>
 
-            <label>Participantes:</label>
-            <div class="checkbox-group" id="listaParticipantes"></div>
+            <div class="form-group" style="margin-top: 15px;">
+                <label>Regional (Selecione uma ou mais):</label>
+                <div class="checkbox-group" id="listaRegionais" onchange="atualizarParticipantes()">
+                    <!-- Carregado via JS -->
+                </div>
+            </div>
 
-            <button type="submit" id="btnEnviar" class="btn-acao" style="width:100%; margin-top:20px;">Salvar Registro do Evento</button>
+            <div class="form-group" style="margin-top: 15px;">
+                <label>Participantes Presentes:</label>
+                <div class="checkbox-group" id="listaParticipantes">
+                    <p style='grid-column: 1/-1; color: #6b7280; font-size: 14px; margin: 0;'>Selecione as Regionais acima para carregar a equipe correspondente.</p>
+                </div>
+            </div>
+
+            <button type="submit" id="btnEnviar" class="btn-acao">Salvar Registro do Evento</button>
         </form>
     </div>
 
@@ -72,45 +101,127 @@
         verificarLogin();
     </script>
     <script src="config.js"></script>
+    
     <script>
+        let instrutoresGlobais = [];
+
         window.onload = () => {
             fetch(URL_GAS)
                 .then(res => res.json())
                 .then(data => {
-                    // Preencher Regional
-                    const selReg = document.getElementById("filtroRegional");
-                    (data.regionais || []).forEach(r => selReg.innerHTML += `<option value="${r[1]}">${r[1]}</option>`);
-
-                    // Preencher Participantes (Instrutores)
-                    const divInst = document.getElementById("listaParticipantes");
-                    (data.instrutores || []).forEach(i => {
-                        divInst.innerHTML += `<label><input type="checkbox" name="participante" value="${i[1]}"> ${i[1]}</label>`;
+                    instrutoresGlobais = data.instrutores || [];
+                    
+                    // Preencher Caixas de Seleção de Regionais
+                    const divReg = document.getElementById("listaRegionais");
+                    divReg.innerHTML = "";
+                    (data.regionais || []).forEach(r => {
+                        const nomeReg = Array.isArray(r) ? (r.length > 1 ? r[1] : r[0]) : r;
+                        if (nomeReg) {
+                            divReg.innerHTML += `
+                                <label class="checkbox-label">
+                                    <input type="checkbox" name="regional" value="${nomeReg}"> ${nomeReg}
+                                </label>`;
+                        }
                     });
 
                     document.getElementById("status").style.display = "none";
                     document.getElementById("formEventos").style.display = "block";
                 })
-                .catch(err => alert("Erro ao carregar dados: " + err));
+                .catch(err => {
+                    document.getElementById("status").innerText = "Erro ao carregar os dados: " + err;
+                    document.getElementById("status").style.color = "#dc2626";
+                });
         };
+
+        // Função para calcular a duração automaticamente
+        function calcularCargaHoraria() {
+            const inicio = document.getElementById("horaInicio").value;
+            const termino = document.getElementById("horaTermino").value;
+            
+            if (inicio && termino) {
+                const [h1, m1] = inicio.split(':').map(Number);
+                const [h2, m2] = termino.split(':').map(Number);
+                
+                let min1 = (h1 * 60) + m1;
+                let min2 = (h2 * 60) + m2;
+                
+                // Trata eventos que possam virar a noite
+                if (min2 < min1) min2 += 24 * 60; 
+                
+                let diff = min2 - min1;
+                let horas = Math.floor(diff / 60);
+                let minutos = diff % 60;
+                
+                document.getElementById("cargaHoraria").value = `${horas}h ${minutos.toString().padStart(2, '0')}m`;
+            } else {
+                document.getElementById("cargaHoraria").value = "";
+            }
+        }
+
+        // Função para filtrar os instrutores com base nas regionais marcadas
+        function atualizarParticipantes() {
+            const divInst = document.getElementById("listaParticipantes");
+            const regionaisSelecionadas = Array.from(document.querySelectorAll('input[name="regional"]:checked')).map(cb => cb.value);
+
+            divInst.innerHTML = "";
+
+            if (regionaisSelecionadas.length === 0) {
+                divInst.innerHTML = "<p style='grid-column: 1/-1; color: #6b7280; font-size: 14px; margin: 0;'>Selecione as Regionais acima para carregar a equipe correspondente.</p>";
+                return;
+            }
+
+            // Filtra cruzando a regional do instrutor com as que foram marcadas
+            const instrutoresFiltrados = instrutoresGlobais.filter(i => {
+                const regInstrutor = i.length > 3 ? i[3] : ""; // Coluna D no array costuma ser o índice 3
+                return regionaisSelecionadas.some(regSelecionada => 
+                    regInstrutor === regSelecionada || 
+                    (regSelecionada.includes("Governador") && regInstrutor.includes("Gov."))
+                );
+            });
+
+            if (instrutoresFiltrados.length === 0) {
+                divInst.innerHTML = "<p style='grid-column: 1/-1; color: #ef4444; font-size: 14px; margin: 0;'>Nenhum participante encontrado para as regionais selecionadas.</p>";
+            } else {
+                instrutoresFiltrados.forEach(i => {
+                    const nomeInst = Array.isArray(i) ? (i.length > 1 ? i[1] : i[0]) : i;
+                    divInst.innerHTML += `
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="participante" value="${nomeInst}"> ${nomeInst}
+                        </label>`;
+                });
+            }
+        }
 
         document.getElementById("formEventos").onsubmit = (e) => {
             e.preventDefault();
             const btn = document.getElementById("btnEnviar");
+            
+            const regionais = Array.from(document.querySelectorAll('input[name="regional"]:checked')).map(cb => cb.value).join(", ");
             const participantes = Array.from(document.querySelectorAll('input[name="participante"]:checked')).map(cb => cb.value).join(", ");
 
-            btn.innerText = "A gravar...";
+            if (!regionais) {
+                alert("Selecione pelo menos uma Regional.");
+                return;
+            }
+
+            if (!participantes) {
+                alert("Selecione pelo menos um participante da lista.");
+                return;
+            }
+
+            btn.innerText = "A processar...";
             btn.disabled = true;
 
             const payload = {
-                acao: "salvarEvento", // Chave vital para o Roteador no Código.gs
+                acao: "salvarEvento",
                 tipo: document.getElementById("tipoEncontro").value,
                 modalidade: document.getElementById("modalidade").value,
                 dataEvento: document.getElementById("dataEvento").value,
                 horaInicio: document.getElementById("horaInicio").value,
                 horaFim: document.getElementById("horaTermino").value,
-                regional: document.getElementById("filtroRegional").value,
+                cargaHoraria: document.getElementById("cargaHoraria").value, // Adicionado ao payload
+                regional: regionais,
                 participantes: participantes
-                // Nota: fotosUrl pode ser adicionado aqui futuramente se necessário
             };
 
             fetch(URL_GAS, {
@@ -125,11 +236,12 @@
                     location.reload();
                 } else {
                     alert("Erro no servidor: " + data.msg);
+                    btn.innerText = "Salvar Registro do Evento";
                     btn.disabled = false;
                 }
             })
             .catch(err => {
-                alert("Falha: " + err);
+                alert("Falha de conexão com o servidor: " + err);
                 btn.innerText = "Salvar Registro do Evento";
                 btn.disabled = false;
             });
