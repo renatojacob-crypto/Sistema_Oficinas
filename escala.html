@@ -146,6 +146,18 @@
             return dataStr;
         }
 
+        function aplicarFiltros() {
+            const reg = document.getElementById("fRegional").value;
+            const ofi = document.getElementById("fOficina").value;
+
+            const listaFiltrada = agendamentosGlobais.filter(ag => {
+                const matchReg = (reg === "Todas" || ag.regional === reg);
+                const matchOfi = (ofi === "Todas" || ag.oficina === ofi);
+                return matchReg && matchOfi;
+            });
+
+            renderizarLista(listaFiltrada); // Sua função que monta os cartões na tela
+        }
         function selecionarAgendamento(elemento, id) {
             agendamentoSelecionadoId = id;
             
