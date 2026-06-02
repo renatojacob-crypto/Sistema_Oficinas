@@ -21,7 +21,7 @@
 
         .btn-acao {
             background-color: var(--primary-color); color: white; border: none; 
-            padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; height: 40px;
+            padding: 10px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; height: 40px; transition: background 0.2s;
         }
         .btn-acao:hover { background-color: #0f172a; }
 
@@ -46,6 +46,13 @@
         .styled-table thead tr { background-color: #f9fafb; color: #4b5563; }
         .styled-table th, .styled-table td { padding: 12px 15px; border-bottom: 1px solid #e5e7eb; }
         .styled-table tbody tr:hover { background-color: #f1f5f9; }
+        
+        /* A CORREÇÃO DE OURO PARA O GRÁFICO (EVITA O LOOP INFINITO) */
+        .chart-wrapper {
+            position: relative;
+            height: 300px; /* Altura fixa obrigatória */
+            width: 100%;
+        }
     </style>
 </head>
 <body>
@@ -63,35 +70,29 @@
             <div class="filtros-grid">
                 <div class="form-group">
                     <label>Mês:</label>
-                    <select id="filtroMes">
+                    <select id="filtroMes" onchange="atualizarDashboard()">
                         <option value="Todos">Todos</option>
-                        <option value="1">Janeiro</option>
-                        <option value="2">Fevereiro</option>
-                        <option value="3">Março</option>
-                        <option value="4">Abril</option>
-                        <option value="5">Maio</option>
-                        <option value="6">Junho</option>
-                        <option value="7">Julho</option>
-                        <option value="8">Agosto</option>
-                        <option value="9">Setembro</option>
-                        <option value="10">Outubro</option>
-                        <option value="11">Novembro</option>
-                        <option value="12">Dezembro</option>
+                        <option value="1">Janeiro</option><option value="2">Fevereiro</option>
+                        <option value="3">Março</option><option value="4">Abril</option>
+                        <option value="5">Maio</option><option value="6">Junho</option>
+                        <option value="7">Julho</option><option value="8">Agosto</option>
+                        <option value="9">Setembro</option><option value="10">Outubro</option>
+                        <option value="11">Novembro</option><option value="12">Dezembro</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label>Ano:</label>
-                    <select id="filtroAno">
+                    <select id="filtroAno" onchange="atualizarDashboard()">
                         <option value="Todos">Todos</option>
                     </select>
                 </div>
                 <div class="form-group">
                     <label>Regional:</label>
-                    <select id="filtroRegional">
+                    <select id="filtroRegional" onchange="atualizarDashboard()">
                         <option value="Todas">Todas</option>
                     </select>
                 </div>
-                <button class="btn-acao" onclick="atualizarDashboard()">Filtrar Dashboard</button>
+                <button class="btn-acao" onclick="atualizarDashboard()">Forçar Atualização</button>
             </div>
 
             <div class="kpi-grid">
@@ -120,12 +121,14 @@
             <div class="grid-inferior">
                 <div class="card-branco">
                     <h2>Performance por Regional</h2>
-                    <canvas id="chartRegional"></canvas>
+                    <div class="chart-wrapper">
+                        <canvas id="chartRegional"></canvas>
+                    </div>
                 </div>
 
                 <div class="card-branco">
                     <h2>Relatório de Instrutores</h2>
-                    <div style="overflow-y: auto; max-height: 350px;">
+                    <div style="overflow-y: auto; max-height: 300px;">
                         <table class="styled-table" id="tabelaInstrutores">
                             <thead>
                                 <tr>
@@ -144,16 +147,12 @@
         </div>
     </div>
 
-    <script src="auth.js"></script>
-    <script>
-        verificarLogin();
-    </script>
     <script src="config.js"></script>
     <script>
         let agendamentosGlobais = [];
         let respostasGlobais = [];
-        let agMap = {}; // Mapa para procura rápida
-        let myChart = null;
+        let agMap = {}; 
+        let chartInstancia = null; // Variável Global Limpa
 
         window.onload = () => {
             fetch(URL_GAS)
@@ -170,9 +169,8 @@
                     const regionais = new Set();
                     const anos = new Set();
 
-                    // Mapeamento e extração de filtros baseados nos agendamentos
                     agendamentosGlobais.forEach(ag => {
-                        agMap[ag.id] = ag; // Salva para cruzar com respostas
+                        agMap[ag.id] = ag; 
                         
                         if (ag.regional) regionais.add(ag.regional);
                         const { ano } = extrairMesAno(ag.data);
@@ -290,13 +288,10 @@
             // 4. Calcular Relatório de Instrutores
             const instrutoresMap = {};
             
-            // Só contamos as horas de quem realmente trabalhou (Respostas), 
-            // cruzando com o ID para apanhar a Carga Horária
             respostasGlobais.forEach(resp => {
                 const ag = agMap[resp.idAgendamento];
-                if (!ag) return; // Se a resposta não tiver agendamento pai, ignora
+                if (!ag) return; 
 
-                // Aplica os filtros de data e regional no Agendamento pai
                 const { mes, ano } = extrairMesAno(ag.data);
                 if (valMes !== "Todos" && mes !== valMes) return;
                 if (valAno !== "Todos" && ano !== valAno) return;
@@ -338,21 +333,30 @@
         function desenharGrafico(labels, realizadas, canceladas) {
             const ctx = document.getElementById('chartRegional').getContext('2d');
             
-            // A chave está aqui: destruir o gráfico anterior ANTES de criar um novo
-            if (window.myChart instanceof Chart) {
-                window.myChart.destroy();
+            // Destruição GARANTIDA da instância anterior
+            if (chartInstancia) {
+                chartInstancia.destroy();
             }
             
-            window.myChart = new Chart(ctx, {
+            chartInstancia = new Chart(ctx, {
                 type: 'bar',
                 data: {
                     labels: labels,
                     datasets: [
-                        { label: 'Realizadas', data: realizadas, backgroundColor: '#10b981' },
-                        { label: 'Canceladas', data: canceladas, backgroundColor: '#ef4444' }
+                        { label: 'Realizadas', data: realizadas, backgroundColor: '#10b981', borderRadius: 4 },
+                        { label: 'Canceladas', data: canceladas, backgroundColor: '#ef4444', borderRadius: 4 }
                     ]
                 },
-                options: { responsive: true, maintainAspectRatio: false }
+                options: { 
+                    responsive: true, 
+                    maintainAspectRatio: false, // Só funciona se a div superior tiver altura fixa
+                    plugins: { 
+                        legend: { position: 'bottom' } 
+                    },
+                    scales: {
+                        y: { beginAtZero: true, ticks: { stepSize: 1 } }
+                    }
+                }
             });
         }
     </script>
