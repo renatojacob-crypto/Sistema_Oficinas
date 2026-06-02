@@ -1,15 +1,39 @@
 <!DOCTYPE html>
-<html lang="pt-PT">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Registro Final de Oficina</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .agendamentos-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 15px; max-height: 300px; overflow-y: auto; }
-        .agendamento-card { background: white; border: 2px solid #e5e7eb; padding: 15px; border-radius: 8px; cursor: pointer; }
-        .agendamento-card.selecionado { border-color: var(--primary-color); background: #f0fdf4; }
-        .card-form { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 20px; display: none; }
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
+        .card-branco { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 20px; }
+        
+        .filtros-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; }
+        @media (max-width: 600px) { .filtros-grid, .grid-2 { grid-template-columns: 1fr; } }
+        
+        .form-group label { font-size: 13px; font-weight: 600; color: #4b5563; margin-bottom: 5px; display: block; }
+        .form-group select, .form-group input { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
+
+        .agendamentos-grid { display: grid; grid-template-columns: 1fr; gap: 12px; max-height: 400px; overflow-y: auto; padding-right: 5px; }
+
+        .agendamento-card {
+            background-color: white; border: 2px solid #e5e7eb; border-radius: 8px;
+            padding: 15px; cursor: pointer; transition: all 0.2s ease;
+        }
+        .agendamento-card:hover { border-color: #9ca3af; }
+        .agendamento-card.selecionado { border-color: var(--primary-color) !important; background-color: #f0fdf4; }
+
+        .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; margin-top: 5px; padding: 15px; background: #f9fafb; border-radius: 6px; border: 1px solid #e5e7eb; }
+        .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; }
+
+        .btn-acao {
+            background-color: var(--primary-color); color: white; border: none; 
+            padding: 15px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; 
+            width: 100%; margin-top: 20px; font-size: 15px; transition: background 0.2s;
+        }
+        .btn-acao:disabled { background-color: #9ca3af; cursor: not-allowed; }
     </style>
 </head>
 <body>
@@ -19,81 +43,280 @@
             <h1>Registro de Oficina</h1>
         </header>
 
-        <div id="status" style="text-align: center; padding: 20px;">Carregando oficinas agendadas...</div>
+        <div id="status" style="text-align: center; font-weight: bold; padding: 20px; color: #4b5563;">Carregando banco de dados...</div>
 
         <div id="conteudoPrincipal" style="display: none;">
-            <div class="card-form" style="display: block;">
-                <h3>1. Selecione a Oficina Realizada</h3>
+            <div class="card-branco">
+                <h3 style="margin-top: 0;">1. Selecione a Oficina</h3>
+                <div class="filtros-grid">
+                    <div class="form-group"><label>Regional:</label><select id="fRegional" onchange="aplicarFiltros()"><option value="Todas">Todas</option></select></div>
+                    <div class="form-group"><label>Oficina:</label><select id="fOficina" onchange="aplicarFiltros()"><option value="Todas">Todas</option></select></div>
+                </div>
                 <div class="agendamentos-grid" id="listaAgendamentos"></div>
+                <div id="msgVazio" style="display:none; text-align:center; padding: 20px; color: #6b7280; font-style: italic;">Não há oficinas pendentes para os filtros aplicados.</div>
             </div>
 
-            <form id="formRegistro" class="card-form">
-                <h3 id="tituloOficina">Preencher dados finais</h3>
-                <div class="form-group">
+            <form id="formRegistro" class="card-branco" style="display: none;">
+                <h3 id="tituloOficina" style="margin-top: 0; color: var(--primary-color);">Preencher dados finais</h3>
+                
+                <div class="form-group" style="margin-bottom: 20px;">
                     <label>Status Final:</label>
-                    <select id="statusFinal" required>
+                    <select id="statusFinal" onchange="alternarCampos()" required>
+                        <option value="">Selecione...</option>
                         <option value="Realizada">Realizada</option>
-                        <option value="Cancelada (Medida)">Cancelada (Medida)</option>
+                        <option value="Cancelada (Medir)">Cancelada (Medir)</option>
+                        <option value="Cancelada (Não Medir)">Cancelada (Não Medir)</option>
                     </select>
                 </div>
-                <div class="form-group"><label>Instrutores presentes:</label><input type="text" id="instrutores" required></div>
-                <div class="form-group"><label>Qtde Alunos:</label><input type="number" id="alunos" required></div>
-                <div class="form-group"><label>Fotos (Link Google Drive):</label><input type="text" id="fotos" placeholder="Cole o link da pasta aqui..."></div>
+
+                <div id="divMotivo" class="form-group" style="display: none; background: #fef2f2; padding: 15px; border-radius: 8px; border: 1px solid #fecaca;">
+                    <label style="color: #991b1b;">Motivo do Cancelamento:</label>
+                    <input type="text" id="motivo" placeholder="Descreva brevemente o motivo">
+                </div>
+
+                <div id="divProcedimentoPadrao" style="display: none;">
+                    <div class="grid-2">
+                        <div class="form-group">
+                            <label>Turno:</label>
+                            <select id="turno" class="form-dinamico"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Qtd Alunos:</label>
+                            <input type="number" id="alunos" placeholder="Apenas números">
+                        </div>
+                    </div>
+
+                    <div class="grid-2" style="margin-top: 15px;">
+                        <div class="form-group">
+                            <label>Ano (Turma):</label>
+                            <select id="turma" class="form-dinamico"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Segmento:</label>
+                            <select id="segmento" class="form-dinamico"></select>
+                        </div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label>Acompanhantes (Professores/Coordenadores):</label>
+                        <input type="text" id="acompanhantes" placeholder="Ex: Prof. Mário, Coordenadora Lúcia">
+                    </div>
+
+                    <div class="form-group" style="margin-top: 15px;">
+                        <label>Instrutores Presentes (Selecione):</label>
+                        <div class="checkbox-grid" id="listaInstrutores"></div>
+                    </div>
+
+                    <div class="form-group" style="margin-top: 15px; background: #f0f9ff; padding: 15px; border-radius: 8px; border: 1px dashed #7dd3fc;">
+                        <label>Fotos (Upload direto para o Drive):</label>
+                        <input type="file" id="fotosInput" multiple accept="image/*">
+                        <small style="color: #6b7280;">Pode selecionar múltiplas fotos.</small>
+                    </div>
+                </div>
                 
-                <button type="submit" id="btnEnviar" class="btn-acao" style="width:100%;">Finalizar Registro</button>
+                <button type="submit" id="btnEnviar" class="btn-acao">Salvar Registro</button>
             </form>
         </div>
     </div>
 
-    <script src="auth.js"></script>
-    <script>
-        verificarLogin();
-    </script>
     <script src="config.js"></script>
     <script>
+        let dadosGlobais = {};
+        let pendentesGlobais = [];
         let agendamentoSelecionado = null;
 
         window.onload = () => {
             fetch(URL_GAS)
                 .then(res => res.json())
                 .then(data => {
-                    const container = document.getElementById("listaAgendamentos");
-                    (data.agendamentos || []).filter(a => a.status === "Agendada").forEach(ag => {
-                        const div = document.createElement("div");
-                        div.className = "agendamento-card";
-                        div.onclick = () => {
-                            agendamentoSelecionado = ag;
-                            document.querySelectorAll(".agendamento-card").forEach(el => el.classList.remove("selecionado"));
-                            div.classList.add("selecionado");
-                            document.getElementById("tituloOficina").innerText = `Registro: ${ag.oficina} (${ag.inst})`;
-                            document.getElementById("formRegistro").style.display = "block";
-                        };
-                        div.innerHTML = `<strong>${ag.data}</strong> | ${ag.oficina} <br><small>${ag.inst}</small>`;
-                        container.appendChild(div);
+                    dadosGlobais = data;
+                    pendentesGlobais = (data.agendamentos || []).filter(a => a.status === "Agendada");
+
+                    // Preencher Filtros de Regional e Oficina
+                    const regionais = new Set(), oficinas = new Set();
+                    pendentesGlobais.forEach(ag => {
+                        if (ag.regional) regionais.add(ag.regional);
+                        if (ag.oficina) oficinas.add(ag.oficina);
                     });
+                    [...regionais].sort().forEach(r => document.getElementById("fRegional").innerHTML += `<option value="${r}">${r}</option>`);
+                    [...oficinas].sort().forEach(o => document.getElementById("fOficina").innerHTML += `<option value="${o}">${o}</option>`);
+
+                    // Preencher Menus Suspensos Dinâmicos (Assume-se que o Código.gs envia estes arrays)
+                    popularSelectDinamico("turno", data.turnos || []);
+                    popularSelectDinamico("turma", data.turmas || []);
+                    popularSelectDinamico("segmento", data.segmentos || []);
+
                     document.getElementById("status").style.display = "none";
                     document.getElementById("conteudoPrincipal").style.display = "block";
+
+                    renderizarLista(pendentesGlobais);
+                })
+                .catch(err => {
+                    document.getElementById("status").innerText = "Erro ao carregar dados: " + err.message;
+                    document.getElementById("status").style.color = "#dc2626";
                 });
         };
 
-        document.getElementById("formRegistro").onsubmit = (e) => {
+        function popularSelectDinamico(id, array) {
+            const select = document.getElementById(id);
+            select.innerHTML = '<option value="">Selecione...</option>';
+            array.forEach(item => {
+                // Se for um array (vazio da planilha), pega o índice 0, senão pega direto
+                const valor = Array.isArray(item) ? item[0] : item; 
+                if (valor) select.innerHTML += `<option value="${valor}">${valor}</option>`;
+            });
+        }
+
+        function formatarDataBR(dataStr) {
+            if (!dataStr) return "";
+            if (dataStr.includes('/')) return dataStr;
+            const p = dataStr.split('-');
+            return p.length >= 3 ? `${p[2]}/${p[1]}/${p[0]}` : dataStr;
+        }
+
+        function aplicarFiltros() {
+            const reg = document.getElementById("fRegional").value;
+            const ofi = document.getElementById("fOficina").value;
+            const filtrados = pendentesGlobais.filter(ag => (reg === "Todas" || ag.regional === reg) && (ofi === "Todas" || ag.oficina === ofi));
+            
+            renderizarLista(filtrados);
+            document.getElementById("formRegistro").style.display = "none";
+        }
+
+        function renderizarLista(lista) {
+            const container = document.getElementById("listaAgendamentos");
+            container.innerHTML = "";
+
+            if (lista.length === 0) {
+                document.getElementById("msgVazio").style.display = "block";
+            } else {
+                document.getElementById("msgVazio").style.display = "none";
+                lista.sort((a, b) => a.data.localeCompare(b.data));
+
+                lista.forEach(ag => {
+                    const div = document.createElement("div");
+                    div.className = "agendamento-card";
+                    div.onclick = () => selecionarAgendamento(div, ag);
+                    
+                    div.innerHTML = `
+                        <div style="color: var(--primary-color); font-weight: bold; margin-bottom: 5px;">
+                            ${formatarDataBR(ag.data)} | ${ag.inicio ? ag.inicio.substring(0,5) : "--:--"}
+                        </div>
+                        <div style="font-size: 15px; font-weight: 600; color: #374151;">${ag.oficina}</div>
+                        <div style="font-size: 13px; color: #6b7280;">${ag.inst}</div>
+                    `;
+                    container.appendChild(div);
+                });
+            }
+        }
+
+        function selecionarAgendamento(elemento, ag) {
+            agendamentoSelecionado = ag;
+            document.querySelectorAll(".agendamento-card").forEach(el => el.classList.remove("selecionado"));
+            elemento.classList.add("selecionado");
+            
+            document.getElementById("tituloOficina").innerText = `Registro: ${ag.oficina} (${ag.inst})`;
+            document.getElementById("formRegistro").style.display = "block";
+            
+            document.getElementById("statusFinal").value = "";
+            alternarCampos();
+
+            // Filtrar e popular a checkbox de instrutores baseado na regional da oficina
+            const containerInst = document.getElementById("listaInstrutores");
+            containerInst.innerHTML = "";
+            const instrutoresDaRegional = (dadosGlobais.instrutores || []).filter(i => 
+                i[3] === ag.regional || (ag.regional && i[3] && ag.regional.includes(i[3].replace("Gov.", "Governador")))
+            );
+
+            if(instrutoresDaRegional.length === 0) {
+                containerInst.innerHTML = "<span style='color:red; font-size:12px;'>Nenhum instrutor cadastrado para esta regional.</span>";
+            } else {
+                instrutoresDaRegional.forEach(i => {
+                    containerInst.innerHTML += `<label class="checkbox-label"><input type="checkbox" name="inst" value="${i[1]}"> ${i[1]}</label>`;
+                });
+            }
+
+            document.getElementById("formRegistro").scrollIntoView({ behavior: "smooth" });
+        }
+
+        function alternarCampos() {
+            const status = document.getElementById("statusFinal").value;
+            const divMotivo = document.getElementById("divMotivo");
+            const divPadrao = document.getElementById("divProcedimentoPadrao");
+            const requeridos = ["turno", "alunos", "turma", "segmento"];
+
+            if (status === "Cancelada (Não Medir)") {
+                divMotivo.style.display = "block";
+                divPadrao.style.display = "none";
+                document.getElementById("motivo").required = true;
+                requeridos.forEach(id => document.getElementById(id).required = false);
+            } else if (status === "Realizada" || status === "Cancelada (Medir)") {
+                divMotivo.style.display = "none";
+                divPadrao.style.display = "block";
+                document.getElementById("motivo").required = false;
+                requeridos.forEach(id => document.getElementById(id).required = true);
+            } else {
+                divMotivo.style.display = "none";
+                divPadrao.style.display = "none";
+            }
+        }
+
+        // Função Assíncrona para converter as imagens em Base64
+        async function prepararFotos() {
+            const files = document.getElementById("fotosInput").files;
+            const fotoArray = [];
+            
+            for (let i = 0; i < files.length; i++) {
+                const file = files[i];
+                const base64 = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result.split(',')[1]);
+                    reader.readAsDataURL(file);
+                });
+                fotoArray.push({ nome: file.name, mimeType: file.type, base64: base64 });
+            }
+            return fotoArray;
+        }
+
+        document.getElementById("formRegistro").onsubmit = async (e) => {
             e.preventDefault();
+            
+            const status = document.getElementById("statusFinal").value;
+            const instrutoresSelecionados = Array.from(document.querySelectorAll('input[name="inst"]:checked')).map(c => c.value).join(", ");
+            
+            if ((status === "Realizada" || status === "Cancelada (Medir)") && !instrutoresSelecionados) {
+                alert("Por favor, selecione pelo menos um instrutor presente.");
+                return;
+            }
+
             const btn = document.getElementById("btnEnviar");
-            btn.innerText = "Processando...";
+            btn.innerText = "Enviando fotos e gravando dados (Aguarde)...";
             btn.disabled = true;
 
+            let fotosProcessadas = [];
+            if (status !== "Cancelada (Não Medir)") {
+                try { fotosProcessadas = await prepararFotos(); } 
+                catch (err) { alert("Erro ao ler as fotos do seu dispositivo."); btn.innerText = "Salvar Registro"; btn.disabled = false; return; }
+            }
+
             const payload = {
-                acao: "salvarRealizada", // Roteador no Código.gs
+                acao: "salvarRealizada",
                 idAgendamento: agendamentoSelecionado.id,
-                status: document.getElementById("statusFinal").value,
+                status: status,
+                motivo: document.getElementById("motivo").value,
                 regional: agendamentoSelecionado.regional,
                 oficina: agendamentoSelecionado.oficina,
                 dataOficina: agendamentoSelecionado.data,
                 cidade: agendamentoSelecionado.cidade,
                 instituicao: agendamentoSelecionado.inst,
-                instrutores: document.getElementById("instrutores").value,
+                // Novos campos estruturados:
+                turno: document.getElementById("turno").value,
                 alunos: document.getElementById("alunos").value,
-                fotosUrl: document.getElementById("fotos").value
+                turma: document.getElementById("turma").value,
+                segmento: document.getElementById("segmento").value,
+                acompanhantes: document.getElementById("acompanhantes").value,
+                instrutores: instrutoresSelecionados,
+                fotos: fotosProcessadas // As fotos vão convertidas e prontas para o script
             };
 
             fetch(URL_GAS, {
@@ -104,15 +327,17 @@
             .then(res => res.json())
             .then(data => {
                 if(data.status === "sucesso") {
-                    alert("Registro finalizado com sucesso!");
+                    alert("Registro e fotos salvos com sucesso!");
                     location.reload();
                 } else {
-                    alert("Erro: " + data.msg);
+                    alert("Erro no servidor: " + data.msg);
+                    btn.innerText = "Salvar Registro";
                     btn.disabled = false;
                 }
             })
             .catch(err => {
-                alert("Falha de conexão: " + err);
+                alert("Falha de comunicação: " + err);
+                btn.innerText = "Salvar Registro";
                 btn.disabled = false;
             });
         };
