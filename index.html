@@ -69,7 +69,7 @@
             fetch(`${URL_GAS}?acao=login&usuario=${encodeURIComponent(u)}&senha=${encodeURIComponent(s)}`)
                 .then(res => res.json())
                 .then(data => {
-                    if (data.sucesso) {
+                    if (data.sucesso === true) {
                         // Salva o "crachá" na sessão do navegador
                         sessionStorage.setItem("logado", "sim");
                         window.location.href = "portal.html"; // Redireciona
