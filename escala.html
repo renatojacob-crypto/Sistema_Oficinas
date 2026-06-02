@@ -51,6 +51,10 @@
             <p style="color: #6b7280; font-size: 14px; margin-top: 5px;">Atribua a equipa de instrutores às oficinas pendentes</p>
         </header>
 
+        <div class="filtros-grid" style="margin-bottom:20px;">
+            <select id="fRegional" onchange="aplicarFiltros()"><option value="Todas">Todas Regionais</option></select>
+            <select id="fOficina" onchange="aplicarFiltros()"><option value="Todas">Todas Oficinas</option></select>
+        </div>
         <div id="status" style="text-align: center; font-weight: bold; padding: 20px; color: #4b5563;">A carregar oficinas disponíveis...</div>
 
         <div id="conteudoPrincipal" style="display: none;">
