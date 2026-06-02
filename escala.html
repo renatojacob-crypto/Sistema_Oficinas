@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="pt-PT">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -74,7 +74,7 @@
                 <div class="agendamentos-grid" id="listaAgendamentos">
                     </div>
                 <div id="msgVazio" style="display:none; text-align:center; padding: 30px; color: #6b7280; font-style: italic;">
-                    Não há oficinas agendadas para os filtros selecionados.
+                    Não há oficinas sem escala pendentes para os filtros selecionados.
                 </div>
             </div>
 
@@ -90,6 +90,9 @@
         </div>
     </div>
 
+    <script src="auth.js"></script>
+    <script>verificarLogin();</script>
+    
     <script src="config.js"></script>
     <script>
         let dadosGlobais = {};
@@ -104,10 +107,16 @@
 
                     dadosGlobais = data;
 
-                    // 1. Guarda apenas as oficinas pendentes
-                    pendentesGlobais = (data.agendamentos || []).filter(a => a.status === "Agendada");
+                    // 1. Identificar quais os Agendamentos já possuem Escala salva
+                    const escalasSalvas = data.escala || [];
+                    const idsComEscala = new Set(escalasSalvas.map(e => String(e.idAgendamento)));
 
-                    // 2. Extrai Regionais e Oficinas para os filtros
+                    // 2. Filtra as oficinas: Só entra se for "Agendada" E se não estiver no Set idsComEscala
+                    pendentesGlobais = (data.agendamentos || []).filter(a => 
+                        a.status === "Agendada" && !idsComEscala.has(String(a.id))
+                    );
+
+                    // 3. Extrai Regionais e Oficinas para os filtros
                     const regionais = new Set();
                     const oficinas = new Set();
 
@@ -116,7 +125,7 @@
                         if (ag.oficina) oficinas.add(ag.oficina);
                     });
 
-                    // 3. Popula os Selects de Filtro
+                    // 4. Popula os Selects de Filtro
                     const selReg = document.getElementById("fRegional");
                     [...regionais].sort().forEach(r => selReg.innerHTML += `<option value="${r}">${r}</option>`);
 
@@ -126,7 +135,7 @@
                     document.getElementById("status").style.display = "none";
                     document.getElementById("conteudoPrincipal").style.display = "block";
 
-                    // 4. Renderiza a lista pela primeira vez
+                    // 5. Renderiza a lista pela primeira vez
                     renderizarLista(pendentesGlobais);
                 })
                 .catch(err => {
@@ -135,7 +144,6 @@
                 });
         };
 
-        // Função que é ativada sempre que o utilizador muda um filtro
         function aplicarFiltros() {
             const reg = document.getElementById("fRegional").value;
             const ofi = document.getElementById("fOficina").value;
@@ -147,10 +155,9 @@
             });
 
             renderizarLista(filtrados);
-            document.getElementById("corpoEscala").style.display = "none"; // Esconde a aba de escala se mudar o filtro
+            document.getElementById("corpoEscala").style.display = "none"; 
         }
 
-        // Função responsável por desenhar as oficinas na tela
         function renderizarLista(lista) {
             const container = document.getElementById("listaAgendamentos");
             container.innerHTML = "";
@@ -160,7 +167,6 @@
             } else {
                 document.getElementById("msgVazio").style.display = "none";
                 
-                // Ordena por data
                 lista.sort((a, b) => a.data.localeCompare(b.data));
 
                 lista.forEach(ag => {
