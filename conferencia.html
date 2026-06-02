@@ -96,7 +96,7 @@
                 if (regFiltro !== "Todas" && ag.regional !== regFiltro) return;
                 if (ofiFiltro !== "Todas" && ag.oficina !== ofiFiltro) return;
 
-                mapa["id_" + esc.linhaAg] = { 
+                mapa["id_" + esc.id] = { 
                     data: ag.dataOficina, hora: ag.horaInicio || "--:--", 
                     reg: ag.regional, ofi: ag.oficina, 
                     esc: esc.instrutoresEscalados, real: "" 
