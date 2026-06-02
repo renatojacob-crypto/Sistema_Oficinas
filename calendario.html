@@ -2,59 +2,175 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Calendário de Oficinas</title>
     <link rel="stylesheet" href="style.css">
     <script src='https://cdn.jsdelivr.net/npm/fullcalendar@6.1.10/index.global.min.js'></script>
     <style>
-        #calendar { background: white; padding: 20px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); }
-        .filter-container { background: white; padding: 20px; border-radius: 12px; margin-bottom: 20px; display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 15px; border: 1px solid #ccc; }
+        .container { max-width: 1100px; margin: 0 auto; padding: 20px; }
+        .card-branco { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 20px; }
+        
+        .filtros-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 20px; }
+        @media (max-width: 600px) { .filtros-grid { grid-template-columns: 1fr; } }
+        
+        .form-group label { font-size: 13px; font-weight: 600; color: #4b5563; margin-bottom: 5px; display: block; }
+        .form-group select { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; }
+        
+        /* Legenda de Cores */
+        .legenda { display: flex; gap: 15px; margin-bottom: 20px; font-size: 13px; font-weight: bold; justify-content: center; flex-wrap: wrap; }
+        .leg-item { display: flex; align-items: center; gap: 6px; }
+        .leg-color { width: 16px; height: 16px; border-radius: 4px; }
+        
+        #calendar { max-height: 800px; }
+        
+        /* Ajuste visual para os eventos no calendário */
+        .fc-event { cursor: pointer; border: none; padding: 2px; }
+        .fc-event-title { font-weight: 600; font-size: 12px; }
     </style>
 </head>
 <body>
     <div class="container">
-        <div id="status">A carregar dados...</div>
-        <div id="calendar" style="display: none;"></div>
+        <header class="form-header" style="text-align: center;">
+            <a href="siscontrol.html" style="text-decoration: none; color: var(--primary-color); font-size: 14px; font-weight: 600;">← Voltar ao Início</a>
+            <h1>Calendário de Oficinas</h1>
+        </header>
+
+        <div id="status" style="text-align: center; font-weight: bold; padding: 20px; color: #4b5563;">Carregando calendário...</div>
+
+        <div id="conteudoPrincipal" style="display: none;">
+            <div class="card-branco">
+                
+                <div class="filtros-grid">
+                    <div class="form-group">
+                        <label>Filtrar por Regional:</label>
+                        <select id="fRegional" onchange="aplicarFiltros()"><option value="Todas">Todas Regionais</option></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Filtrar por Status:</label>
+                        <select id="fStatus" onchange="aplicarFiltros()">
+                            <option value="Todos">Todos</option>
+                            <option value="Agendada">Apenas Agendadas</option>
+                            <option value="Realizada">Apenas Realizadas</option>
+                            <option value="Cancelada">Apenas Canceladas</option>
+                        </select>
+                    </div>
+                </div>
+                
+                <div class="legenda">
+                    <div class="leg-item"><div class="leg-color" style="background: #3b82f6;"></div> Agendada</div>
+                    <div class="leg-item"><div class="leg-color" style="background: #10b981;"></div> Realizada</div>
+                    <div class="leg-item"><div class="leg-color" style="background: #ef4444;"></div> Cancelada</div>
+                </div>
+
+                <div id="calendar"></div>
+            </div>
+        </div>
     </div>
 
     <script src="config.js"></script>
     <script>
         let calendar;
-        let todosEventos = [];
+        let todosEventosRaw = [];
 
         window.onload = () => {
             fetch(URL_GAS)
                 .then(res => res.json())
                 .then(data => {
-                    // Mapeamento dos dados que vêm do Código.gs
-                    todosEventos = (data.agendamentos || []).map(ag => {
-                        return {
-                            title: `${ag.oficina} - ${ag.inst}`,
-                            start: `${ag.data}T${ag.inicio || '08:00:00'}`,
-                            end: `${ag.data}T${ag.fim || '17:00:00'}`,
-                            color: ag.status === 'Realizada' ? '#10b981' : (ag.status && ag.status.includes('Cancelada') ? '#ef4444' : '#3b82f6'),
-                            extendedProps: { status: ag.status, regional: ag.regional, oficina: ag.oficina }
-                        };
-                    });
+                    const agendamentos = data.agendamentos || [];
                     
-                    renderizarCalendario(todosEventos);
+                    // Preencher o filtro de Regionais dinamicamente
+                    const regionais = new Set();
+                    agendamentos.forEach(ag => { if(ag.regional) regionais.add(ag.regional); });
+                    const selReg = document.getElementById("fRegional");
+                    [...regionais].sort().forEach(r => selReg.innerHTML += `<option value="${r}">${r}</option>`);
+
+                    todosEventosRaw = agendamentos;
+
+                    document.getElementById("status").style.display = "none";
+                    document.getElementById("conteudoPrincipal").style.display = "block";
+
+                    inicializarCalendario();
+                    aplicarFiltros(); // Carrega os eventos iniciais
                 })
                 .catch(err => {
-                    document.getElementById("status").innerText = "Erro ao carregar: " + err;
+                    document.getElementById("status").innerText = "Erro ao carregar dados: " + err.message;
+                    document.getElementById("status").style.color = "#dc2626";
                 });
         };
 
-        function renderizarCalendario(eventos) {
-            document.getElementById("status").style.display = "none";
-            const calEl = document.getElementById('calendar');
-            calEl.style.display = "block";
+        // FUNÇÃO CRÍTICA: Converte DD/MM/YYYY para YYYY-MM-DD para o calendário entender
+        function formatarDataISO(dataStr) {
+            if (!dataStr) return null;
+            if (dataStr.includes('/')) {
+                const partes = dataStr.split('/');
+                if(partes.length === 3) return `${partes[2]}-${partes[1]}-${partes[0]}`; 
+            }
+            return dataStr; // Se já estiver no formato YYYY-MM-DD, devolve como está
+        }
 
+        function inicializarCalendario() {
+            const calEl = document.getElementById('calendar');
             calendar = new FullCalendar.Calendar(calEl, {
                 initialView: 'dayGridMonth',
                 locale: 'pt-br',
-                events: eventos,
-                eventClick: info => alert(`Oficina: ${info.event.title}\nStatus: ${info.event.extendedProps.status}`)
+                headerToolbar: {
+                    left: 'prev,next today',
+                    center: 'title',
+                    right: 'dayGridMonth,timeGridWeek,listMonth'
+                },
+                buttonText: {
+                    today: 'Hoje',
+                    month: 'Mês',
+                    week: 'Semana',
+                    list: 'Lista'
+                },
+                events: [], // Inicialmente vazio, será preenchido pelos filtros
+                eventClick: function(info) {
+                    alert(`Oficina: ${info.event.title}\nStatus: ${info.event.extendedProps.status}\nRegional: ${info.event.extendedProps.regional}\nHora: ${info.event.start.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}`);
+                }
             });
             calendar.render();
+        }
+
+        function aplicarFiltros() {
+            const fReg = document.getElementById("fRegional").value;
+            const fStat = document.getElementById("fStatus").value;
+
+            // Limpa o calendário antes de redesenhar os filtros
+            calendar.removeAllEvents();
+
+            todosEventosRaw.forEach(ag => {
+                // Checa se o evento atende aos filtros
+                const matchReg = (fReg === "Todas" || ag.regional === fReg);
+                const statusAg = ag.status || "";
+                const matchStat = (fStat === "Todos" || (fStat === "Cancelada" && statusAg.includes("Cancelada")) || statusAg === fStat);
+                
+                if (matchReg && matchStat) {
+                    const dataISO = formatarDataISO(ag.data);
+                    if (!dataISO) return; // Se a data for inválida, pula o evento
+
+                    // Define hora de início e fim padrão para evitar erros caso a planilha esteja vazia nesses campos
+                    const horaInicio = (ag.inicio && ag.inicio.length >= 5) ? ag.inicio.substring(0,5) : "08:00";
+                    const horaFim = (ag.fim && ag.fim.length >= 5) ? ag.fim.substring(0,5) : "12:00";
+                    
+                    // Definição de Cores Baseada no Status
+                    let cor = '#3b82f6'; // Azul Padrão (Agendada)
+                    if (statusAg === 'Realizada') cor = '#10b981'; // Verde
+                    if (statusAg.includes('Cancelada')) cor = '#ef4444'; // Vermelho
+
+                    // Adiciona o evento formatado ao calendário
+                    calendar.addEvent({
+                        title: `${ag.oficina} (${ag.inst})`,
+                        start: `${dataISO}T${horaInicio}:00`,
+                        end: `${dataISO}T${horaFim}:00`,
+                        color: cor,
+                        extendedProps: {
+                            status: statusAg || "Sem Status Registrado",
+                            regional: ag.regional || "N/A"
+                        }
+                    });
+                }
+            });
         }
     </script>
 </body>
