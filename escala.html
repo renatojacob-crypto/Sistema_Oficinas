@@ -1,15 +1,17 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-PT">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Definição de Escala</title>
     <link rel="stylesheet" href="style.css">
     <style>
+        .container { max-width: 900px; margin: 0 auto; padding: 20px; }
         .card-branco { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 20px; }
         .agendamentos-grid { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 15px; max-height: 400px; overflow-y: auto; padding-right: 5px; }
-        
+
         .agendamento-card {
-            background-color: var(--cor-fundo, #ffffff);
+            background-color: white;
             border: 2px solid #e5e7eb;
             border-radius: 8px;
             padding: 15px;
@@ -20,136 +22,215 @@
             flex-direction: column;
             gap: 5px;
         }
-
         .agendamento-card:hover { filter: brightness(0.96); border-color: #9ca3af; }
-        .agendamento-card.selecionado { border-color: var(--primary-color) !important; box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.2) !important; filter: brightness(0.92); }
+        .agendamento-card.selecionado { border-color: var(--primary-color) !important; background-color: #f0fdf4; }
 
-        .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: 12px; margin-top: 10px; }
-        .checkbox-label { display: flex; align-items: center; gap: 8px; cursor: pointer; background: #f9fafb; padding: 10px; border-radius: 6px; border: 1px solid #eee; transition: 0.2s; }
-        .checkbox-label:hover { border-color: var(--primary-color); }
-        .info-titulo { color: var(--primary-color); font-weight: bold; font-size: 16px; border-bottom: 1px solid #e5e7eb; padding-bottom: 5px; margin-bottom: 5px; }
+        .checkbox-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 10px; margin-top: 15px; }
+        .checkbox-label { display: flex; align-items: center; gap: 8px; font-size: 14px; cursor: pointer; color: #374151; }
+        
+        .btn-acao {
+            background-color: var(--primary-color); color: white; border: none; 
+            padding: 12px 20px; border-radius: 6px; font-weight: 600; cursor: pointer; 
+            width: 100%; margin-top: 20px; font-size: 15px; transition: background 0.2s;
+        }
+        .btn-acao:hover { background-color: #0f172a; }
+        
+        .badge { display: inline-block; padding: 3px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; background: #dbeafe; color: #1e40af;}
+        
+        /* Custom scrollbar para a lista de oficinas */
+        .agendamentos-grid::-webkit-scrollbar { width: 6px; }
+        .agendamentos-grid::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+        .agendamentos-grid::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 4px; }
     </style>
 </head>
 <body>
-    <div class="container" style="max-width: 800px;">
-        <a href="siscontrol.html" style="text-decoration: none; color: var(--primary-color); font-weight: 700;">← Voltar ao Início</a>
-        
-        <header class="form-header" style="margin-top: 15px;">
-            <h1 style="color: var(--primary-color); margin: 0;">👥 Escala de Instrutores</h1>
+    <div class="container">
+        <header class="form-header" style="margin-bottom: 20px; text-align: center;">
+            <a href="siscontrol.html" style="text-decoration: none; color: var(--primary-color); font-size: 14px; font-weight: 600; display: block; margin-bottom: 10px;">← Voltar ao Início</a>
+            <h1 style="color: var(--primary-color); margin: 0;">Definir Escala</h1>
+            <p style="color: #6b7280; font-size: 14px; margin-top: 5px;">Atribua a equipa de instrutores às oficinas pendentes</p>
         </header>
 
-        <form id="formEscala" class="card-branco">
-            <label style="font-weight: 600; font-size: 18px;">1. Selecione a Oficina Agendada:</label>
-            <p style="font-size: 13px; color: #6b7280; margin-bottom: 10px;">Clique na oficina específica que deseja escalar:</p>
+        <div id="status" style="text-align: center; font-weight: bold; padding: 20px; color: #4b5563;">A carregar oficinas disponíveis...</div>
+
+        <div id="conteudoPrincipal" style="display: none;">
             
-            <div id="listaAgendamentos" class="agendamentos-grid">
-                <p style="color: #6b7280;">Sincronizando oficinas pendentes...</p>
+            <div class="card-branco">
+                <h2 style="font-size: 16px; margin-top: 0; color: #374151;">1. Selecione a Oficina Pendente</h2>
+                <div class="agendamentos-grid" id="listaAgendamentos">
+                    </div>
+                <div id="msgVazio" style="display:none; text-align:center; padding: 30px; color: #6b7280; font-style: italic;">
+                    Todas as oficinas agendadas já possuem escala, ou não há agendamentos futuros.
+                </div>
             </div>
 
-            <div id="corpoEscala" style="display:none; margin-top:35px; border-top: 2px dashed #e5e7eb; padding-top: 20px;">
-                <label style="font-weight: 600; font-size: 18px;">2. Selecione os Instrutores:</label>
-                <div id="instrutoresContainer" class="checkbox-grid" style="margin-top: 15px;"></div>
-                
-                <button type="submit" id="btnSalvar" style="margin-top: 30px; width: 100%;">Salvar Escala</button>
+            <div class="card-branco" id="corpoEscala" style="display: none;">
+                <h2 style="font-size: 16px; margin-top: 0; color: #374151;">2. Selecione a Equipa (<span id="txtReg" style="color: var(--primary-color);"></span>)</h2>
+                <form id="formEscala">
+                    <div class="checkbox-grid" id="listaInstrutores">
+                        </div>
+                    <button type="submit" class="btn-acao" id="btnEnviar">Salvar Escala Definitiva</button>
+                </form>
             </div>
-        </form>
+
+        </div>
     </div>
 
-    <script>
-        if (sessionStorage.getItem("logado") !== "sim") { window.location.href = "index.html"; }
-    </script>
     <script src="config.js"></script>
     <script>
         let dadosGlobais = {};
         let agendamentoSelecionadoId = null;
 
-        function obterCorRegional(regional) {
-            if (!regional) return "#ffffff";
-            const reg = regional.toLowerCase();
-            if (reg.includes("itabira")) return "#dcfce7";
-            if (reg.includes("governador") || reg.includes("valadares") || reg.includes("gov.")) return "#dbeafe";
-            if (reg.includes("vitória") || reg.includes("vitoria")) return "#fef9c3";
-            return "#ffffff";
-        }
-
         window.onload = () => {
             fetch(URL_GAS)
-                .then(res => res.json())
+                .then(res => {
+                    if (!res.ok) throw new Error("Erro na ligação ao servidor: " + res.status);
+                    return res.json();
+                })
                 .then(data => {
+                    if (data.status === "erro" || data.erro) throw new Error(data.msg || data.erro);
+
                     dadosGlobais = data;
-                    renderizarLista();
+
+                    // Filtra apenas agendamentos que estão com status "Agendada"
+                    const pendentes = (data.agendamentos || []).filter(a => a.status === "Agendada");
+
+                    const containerAg = document.getElementById("listaAgendamentos");
+                    containerAg.innerHTML = "";
+
+                    if (pendentes.length === 0) {
+                        document.getElementById("msgVazio").style.display = "block";
+                    } else {
+                        // Ordena para mostrar as datas mais próximas primeiro
+                        pendentes.sort((a, b) => a.data.localeCompare(b.data));
+
+                        pendentes.forEach(ag => {
+                            const dataFormatada = formatarDataBR(ag.data);
+
+                            const div = document.createElement("div");
+                            div.className = "agendamento-card";
+                            div.onclick = () => selecionarAgendamento(div, ag.id);
+                            div.innerHTML = `
+                                <div style="display:flex; justify-content: space-between; align-items: center;">
+                                    <strong style="color: var(--primary-color);">${dataFormatada} às ${ag.inicio ? ag.inicio.substring(0,5) : "--:--"}</strong>
+                                    <span class="badge">ID: ${ag.id}</span>
+                                </div>
+                                <div style="font-weight: 600; color: #374151; font-size: 15px;">${ag.oficina}</div>
+                                <div style="font-size: 13px; color: #6b7280; margin-top: 3px;">🏢 ${ag.inst} | 📍 ${ag.cidade} (${ag.regional})</div>
+                            `;
+                            containerAg.appendChild(div);
+                        });
+                    }
+
+                    document.getElementById("status").style.display = "none";
+                    document.getElementById("conteudoPrincipal").style.display = "block";
+                })
+                .catch(err => {
+                    document.getElementById("status").innerText = "Erro ao carregar dados: " + err.message;
+                    document.getElementById("status").style.color = "#dc2626";
+                    console.error(err);
                 });
         };
 
-        function renderizarLista() {
-            const container = document.getElementById("listaAgendamentos");
-            container.innerHTML = "";
-            
-            // Filtra o que já tem escala
-            const escalasExistentes = dadosGlobais.escala ? dadosGlobais.escala.map(e => String(e.linhaAg)) : [];
-            const pendentes = dadosGlobais.agendamentos.filter(ag => !escalasExistentes.includes(String(ag.linha)));
+        function formatarDataBR(dataStr) {
+            if (!dataStr) return "";
+            if (dataStr.includes('/')) return dataStr;
+            if (dataStr.includes('-')) {
+                const p = dataStr.split('-');
+                if (p.length >= 3) return `${p[2]}/${p[1]}/${p[0]}`;
+            }
+            return dataStr;
+        }
 
-            if (pendentes.length === 0) {
-                container.innerHTML = '<p style="text-align: center; padding: 20px; font-weight: bold; color: green;">🎉 Todas as oficinas já possuem escala!</p>';
+        function selecionarAgendamento(elemento, id) {
+            agendamentoSelecionadoId = id;
+            
+            // Remove o destaque dos outros cartões e aplica no selecionado
+            document.querySelectorAll(".agendamento-card").forEach(el => el.classList.remove("selecionado"));
+            elemento.classList.add("selecionado");
+
+            // Localiza os dados completos do agendamento
+            const ag = dadosGlobais.agendamentos.find(a => a.id === id);
+            document.getElementById("txtReg").innerText = ag.regional;
+
+            // Filtra e Popula a lista de Instrutores (Baseado na Regional da Oficina)
+            const containerInst = document.getElementById("listaInstrutores");
+            containerInst.innerHTML = "";
+
+            // O Array Instrutores tem a estrutura: [ID, Nome, Função, Regional]
+            const instrutoresDaRegional = (dadosGlobais.instrutores || []).filter(i => 
+                i[3] === ag.regional || (ag.regional && i[3] && ag.regional.includes(i[3].replace("Gov.", "Governador")))
+            );
+
+            if(instrutoresDaRegional.length === 0) {
+                containerInst.innerHTML = "<p style='color:#ef4444; font-size:13px; grid-column: 1 / -1;'>Não foram encontrados instrutores cadastrados para esta regional.</p>";
+            } else {
+                instrutoresDaRegional.forEach(i => {
+                    containerInst.innerHTML += `
+                        <label class="checkbox-label">
+                            <input type="checkbox" name="inst" value="${i[1]}"> ${i[1]}
+                        </label>`;
+                });
+            }
+
+            document.getElementById("corpoEscala").style.display = "block";
+            
+            // Faz um "scroll" automático para a área de selecionar os nomes
+            document.getElementById("corpoEscala").scrollIntoView({ behavior: "smooth", block: "nearest" });
+        }
+
+        // Função de envio de dados para o Servidor
+        document.getElementById("formEscala").onsubmit = (e) => {
+            e.preventDefault();
+            
+            const selecionados = Array.from(document.querySelectorAll('input[name="inst"]:checked')).map(c => c.value).join(", ");
+            
+            if (!selecionados) {
+                alert("Por favor, selecione pelo menos um instrutor para salvar a escala.");
                 return;
             }
 
-            // Ordena pela data (ag.linha representa a ordem de entrada)
-            pendentes.sort((a,b) => b.linha - a.linha).forEach(ag => {
-                const card = document.createElement("div");
-                card.className = "agendamento-card";
-                card.style.setProperty('--cor-fundo', obterCorRegional(ag.regional));
-                card.onclick = () => {
-                    document.querySelectorAll(".agendamento-card").forEach(c => c.classList.remove("selecionado"));
-                    card.classList.add("selecionado");
-                    agendamentoSelecionadoId = ag.linha;
-                    carregarInstrutores(ag);
-                };
-                card.innerHTML = `
-                    <div class="info-titulo">📅 ${ag.dataOficina} | ${ag.oficina}</div>
-                    <div style="font-size: 14px;"><strong>Instituição:</strong> ${ag.instituicao}</div>
-                    <div style="font-size: 13px; color: #4b5563;"><strong>Regional:</strong> ${ag.regional} | <strong>Linha:</strong> ${ag.linha}</div>
-                `;
-                container.appendChild(card);
-            });
-        }
-
-        function carregarInstrutores(ag) {
-            const container = document.getElementById("instrutoresContainer");
-            container.innerHTML = "";
+            const ag = dadosGlobais.agendamentos.find(a => a.id === agendamentoSelecionadoId);
+            const btn = document.getElementById("btnEnviar");
             
-            const instrutoresDaRegional = dadosGlobais.instrutoresData.filter(i => 
-                i[3] === ag.regional || ag.regional.includes(i[3].replace("Gov.", "Governador"))
-            );
+            btn.innerText = "A guardar...";
+            btn.disabled = true;
 
-            instrutoresDaRegional.forEach(i => {
-                container.innerHTML += `
-                    <label class="checkbox-label">
-                        <input type="checkbox" name="inst" value="${i[1]}"> ${i[1]}
-                    </label>`;
-            });
-            document.getElementById("corpoEscala").style.display = "block";
-        }
+            const payload = {
+                acao: "salvarEscala", // Comando essencial para o "Roteador" do Google Apps Script
+                idAgendamento: ag.id,
+                dataOficina: formatarDataBR(ag.data),
+                regional: ag.regional,
+                oficina: ag.oficina,
+                instituicao: ag.inst,
+                instrutores: selecionados
+            };
 
-        document.getElementById("formEscala").onsubmit = (e) => {
-            e.preventDefault();
-            const selecionados = Array.from(document.querySelectorAll('input[name="inst"]:checked')).map(c => c.value).join(", ");
-            if (!selecionados) return alert("Selecione um instrutor.");
-
-            const ag = dadosGlobais.agendamentos.find(a => String(a.linha) === String(agendamentoSelecionadoId));
-            
             fetch(URL_GAS, {
-                method: "POST", mode: "no-cors",
-                body: JSON.stringify({
-                    tipoEnvio: "SALVAR_ESCALA",
-                    linhaAgendamento: ag.linha,
-                    dataOficina: ag.dataOficina,
-                    regional: ag.regional,
-                    oficina: ag.oficina,
-                    instituicao: ag.instituicao,
-                    instrutoresEscalados: selecionados
-                })
-            }).then(() => { alert("Escala salva!"); location.reload(); });
+                method: "POST",
+                headers: { "Content-Type": "text/plain;charset=utf-8" }, // Contorna bloqueios de CORS
+                body: JSON.stringify(payload)
+            })
+            .then(res => {
+                if (!res.ok) throw new Error("Erro HTTP: " + res.status);
+                return res.json();
+            })
+            .then(data => {
+                if(data.status === "sucesso") {
+                    alert("Escala guardada com sucesso no banco de dados!");
+                    location.reload();
+                } else {
+                    alert("Erro no servidor: " + data.msg);
+                    btn.innerText = "Salvar Escala Definitiva";
+                    btn.disabled = false;
+                }
+            })
+            .catch(err => {
+                alert("Falha de ligação com o servidor: " + err.message);
+                console.error(err);
+                btn.innerText = "Salvar Escala Definitiva";
+                btn.disabled = false;
+            });
         };
     </script>
 </body>
