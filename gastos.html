@@ -1,159 +1,121 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html lang="pt-PT">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lançamento de Gastos Realizados</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .hidden { display: none !important; }
-        
-        .box-financas { border: 1px solid #fca5a5; border-radius: 8px; padding: 25px; margin-bottom: 20px; background: #ffffff; }
+        .box-financas { border: 1px solid #e5e7eb; border-radius: 8px; padding: 25px; margin-bottom: 20px; background: #ffffff; box-shadow: 0 2px 8px rgba(0,0,0,0.05); }
         .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; margin-bottom: 15px;}
-        .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 15px; }
-        @media (max-width: 600px) { .grid-3, .grid-2 { grid-template-columns: 1fr; } }
-
+        @media (max-width: 600px) { .grid-2 { grid-template-columns: 1fr; } }
         .input-money { position: relative; }
         .input-money::before { content: "R$"; position: absolute; left: 10px; top: 38px; color: #6b7280; font-weight: 600; }
-        .input-money input { padding-left: 35px !important; font-size: 18px; font-weight: bold; color: #b91c1c;}
+        .input-money input { padding-left: 35px !important; font-size: 18px; font-weight: bold; }
     </style>
 </head>
 <body>
 
-    <div class="container" style="max-width: 900px;">
-        <header class="form-header">
-            <img src="imagens/logopreto.png" alt="Logomarca da Empresa" class="logo-empresa">
+    <div class="container">
+        <header class="form-header" style="text-align: center;">
             <a href="siscontrol.html" style="text-decoration: none; color: var(--primary-color); font-size: 14px; font-weight: 600;">← Voltar ao Início</a>
-            <h1>Gastos<br>Realizados</h1>
+            <h1>Lançamento de Gastos Realizados</h1>
         </header>
 
-        <div id="status" class="loading">Carregando formulário e opções do banco...</div>
+        <div id="status" style="text-align: center; padding: 20px;">A preparar ambiente...</div>
 
-        <form id="formGastos" class="hidden" style="margin-top: 20px; background: #fef2f2; padding: 25px; border-radius: 12px; border: 2px solid #fecaca; box-shadow: 0 4px 6px rgba(0,0,0,0.05);">
-            
-            <div class="box-financas">
-                <label style="font-weight: 700; font-size: 18px; color: #991b1b; display: block; margin-bottom: 15px; border-bottom: 2px solid #fee2e2; padding-bottom: 10px;">Identificação da Despesa</label>
-                
-                <div class="grid-2">
-                    <div class="form-group">
-                        <label>1. Selecione a Regional:</label>
-                        <select id="regionalSelect" required>
-                            <option value="">Carregando...</option>
-                        </select>
-                    </div>
-                    
-                    <div class="form-group">
-                        <label>2. Selecione a Oficina Base:</label>
-                        <select id="oficinaSelect" required>
-                            <option value="">Carregando...</option>
-                        </select>
-                    </div>
+        <form id="formGastos" class="box-financas" style="display:none;">
+            <div class="form-group">
+                <label>Selecione a Oficina realizada:</label>
+                <select id="agendamentoSelect" required>
+                    <option value="">Carregando oficinas...</option>
+                </select>
+            </div>
+
+            <div class="grid-2">
+                <div class="form-group">
+                    <label>Data Inicial do Gasto:</label>
+                    <input type="date" id="dataInicial" required>
+                </div>
+                <div class="form-group">
+                    <label>Data Final do Gasto:</label>
+                    <input type="date" id="dataFinal" required>
                 </div>
             </div>
 
-            <div class="box-financas">
-                <label style="font-weight: 700; font-size: 18px; color: #991b1b; display: block; margin-bottom: 15px; border-bottom: 2px solid #fee2e2; padding-bottom: 10px;">Período e Valor Realizado</label>
-                
-                <div class="grid-3">
-                    <div class="form-group">
-                        <label>3. Data Inicial do Gasto:</label>
-                        <input type="date" id="dataInicial" required>
-                    </div>
-                    <div class="form-group">
-                        <label>4. Data Final do Gasto:</label>
-                        <input type="date" id="dataFinal" required>
-                    </div>
-                    <div class="form-group input-money">
-                        <label>5. Valor Total Realizado:</label>
-                        <input type="number" id="valorTotal" step="0.01" min="0" placeholder="0.00" required>
-                    </div>
-                </div>
+            <div class="form-group input-money">
+                <label>Valor Total Realizado:</label>
+                <input type="number" id="valorTotal" step="0.01" placeholder="0,00" required>
             </div>
 
-            <button type="submit" id="btnEnviar" style="width: 100%; height: 60px; font-size: 18px; margin-top: 10px; background-color: #b91c1c; border: none; color: white; border-radius: 8px; font-weight: bold; cursor: pointer; transition: 0.2s;">Registrar Gasto Definitivo</button>
+            <button type="submit" id="btnEnviar" class="btn-acao" style="width:100%; margin-top:20px;">Registrar Gasto Definitivo</button>
         </form>
     </div>
 
-    <!-- Script de Segurança -->
+    <script src="auth.js"></script>
     <script>
-        if (sessionStorage.getItem("logado") !== "sim") {
-            window.location.href = "index.html"; 
-        }
+        verificarLogin();
     </script>
-
     <script src="config.js"></script>
-
     <script>
+        let agendamentosGlobais = [];
+
         window.onload = () => {
             fetch(URL_GAS)
                 .then(res => res.json())
                 .then(data => {
+                    agendamentosGlobais = data.agendamentos || [];
+                    const sel = document.getElementById("agendamentoSelect");
+                    sel.innerHTML = '<option value="">Escolha uma oficina...</option>';
                     
-                    // 1. Popula as Oficinas (Direto da Aba de Oficinas do Banco)
-                    const selectOfi = document.getElementById("oficinaSelect");
-                    selectOfi.innerHTML = '<option value="">Selecione o tipo de oficina...</option>';
-                    if (data.oficinas && data.oficinas.length > 0) {
-                        data.oficinas.forEach(ofi => {
-                            selectOfi.innerHTML += `<option value="${ofi}">${ofi}</option>`;
-                        });
-                    }
-
-                    // 2. Popula as Regionais buscando automaticamente do sistema
-                    const selectReg = document.getElementById("regionalSelect");
-                    selectReg.innerHTML = '<option value="">Selecione a Regional...</option>';
-                    
-                    let regionaisSet = new Set();
-                    if (data.instrutoresData) data.instrutoresData.forEach(i => { if(i[3]) regionaisSet.add(i[3]); });
-                    if (data.agendamentosDashboard) data.agendamentosDashboard.forEach(ag => { if(ag.regional) regionaisSet.add(ag.regional); });
-                    
-                    [...regionaisSet].sort().forEach(reg => {
-                        selectReg.innerHTML += `<option value="${reg}">${reg}</option>`;
+                    // Mostra apenas oficinas com status "Realizada" para registrar gastos
+                    agendamentosGlobais.filter(a => a.status === "Realizada").forEach(a => {
+                        sel.innerHTML += `<option value="${a.id}">${a.data} - ${a.oficina} (${a.inst})</option>`;
                     });
 
-                    // Libera a tela
                     document.getElementById("status").style.display = "none";
-                    document.getElementById("formGastos").classList.remove("hidden");
+                    document.getElementById("formGastos").style.display = "block";
                 })
-                .catch(err => {
-                    document.getElementById("status").innerText = "Erro de conexão com o servidor.";
-                    document.getElementById("status").style.color = "#dc2626";
-                });
+                .catch(err => alert("Erro ao carregar dados: " + err));
         };
 
         document.getElementById("formGastos").onsubmit = (e) => {
             e.preventDefault();
             const btn = document.getElementById("btnEnviar");
+            const agId = document.getElementById("agendamentoSelect").value;
+            const ag = agendamentosGlobais.find(a => a.id == agId);
 
-            btn.innerText = "Sincronizando com o Banco...";
+            btn.innerText = "A processar...";
             btn.disabled = true;
 
             const payload = {
-                tipoEnvio: "SALVAR_GASTO_REAL",
-                linhaAgendamento: "", // Vazio, pois não é atrelado a um agendamento específico
-                regional: document.getElementById("regionalSelect").value,
-                oficina: document.getElementById("oficinaSelect").value,
-                
-                // TRUQUE: Enviamos a Data Final como a Data de Referência para que o 
-                // Dashboard consiga saber em que mês encaixar este gasto.
-                dataOficina: document.getElementById("dataFinal").value, 
-                
-                dataInicial: document.getElementById("dataInicial").value,
-                dataFinal: document.getElementById("dataFinal").value,
-                valorTotal: parseFloat(document.getElementById("valorTotal").value)
+                acao: "salvarGasto", // Roteador do Código.gs
+                idAgendamento: agId,
+                regional: ag.regional,
+                oficina: ag.oficina,
+                dataOficina: ag.data,
+                dataInicialGasto: document.getElementById("dataInicial").value,
+                dataFinalGasto: document.getElementById("dataFinal").value,
+                valorTotalRealizado: document.getElementById("valorTotal").value
             };
 
             fetch(URL_GAS, {
                 method: "POST",
-                mode: "no-cors",
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify(payload)
             })
-            .then(() => {
-                alert("Gasto Realizado salvo com sucesso!");
-                location.reload(); 
+            .then(res => res.json())
+            .then(data => {
+                if(data.status === "sucesso") {
+                    alert("Gasto registrado com sucesso!");
+                    location.reload();
+                } else {
+                    alert("Erro: " + data.msg);
+                    btn.disabled = false;
+                }
             })
             .catch(err => {
-                alert("Erro ao salvar. Verifique sua conexão.");
-                btn.innerText = "Registrar Gasto Definitivo";
+                alert("Falha de conexão: " + err);
                 btn.disabled = false;
             });
         };
