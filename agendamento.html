@@ -89,42 +89,28 @@
         let dadosGlobais = {};
 
         window.onload = () => {
-            fetch(URL_GAS)
-                .then(res => res.json())
-                .then(data => {
-                    dadosGlobais = data;
-                    
-                    const regionaisUnicas = [...new Set(data.locais.map(r => r[1]))];
-                    popularSelect("regional", regionaisUnicas);
-                    popularSelect("oficina", data.oficinas);
-                    
-                    // --- CORREÇÃO DO AUTOCOMPLETAR AQUI ---
-                    const datalist = document.getElementById("listaInstituicoes");
-                    datalist.innerHTML = ""; // Limpa a lista antes de popular
-                    
-                    // Tenta puxar a lista de instituições varrendo os agendamentos já existentes
-                    if (data.agendamentos && data.agendamentos.length > 0) {
-                        const escolasUnicas = [...new Set(data.agendamentos.map(ag => ag.instituicao))].filter(Boolean).sort();
-                        escolasUnicas.forEach(inst => {
-                            datalist.innerHTML += `<option value="${inst}">`;
-                        });
-                    } 
-                    // Caso o seu backend envie as instituições separadas
-                    else if (data.instituicoes && data.instituicoes.length > 0) {
-                        const escolasUnicas = [...new Set(data.instituicoes)].filter(Boolean).sort();
-                        escolasUnicas.forEach(inst => {
-                            datalist.innerHTML += `<option value="${inst}">`;
-                        });
-                    }
-                    // ----------------------------------------
-
-                    document.getElementById("status").style.display = "none";
-                    document.getElementById("formAgendamento").style.display = "block";
-                })
-                .catch(err => {
-                    document.getElementById("status").innerText = "Erro de conexão com o banco de dados.";
-                    document.getElementById("status").style.color = "#dc2626";
-                });
+            fetch(URL_GAS, {
+                method: "POST",
+                headers: { 
+                    "Content-Type": "text/plain;charset=utf-8" 
+                },
+                body: JSON.stringify(payload)
+            })
+            .then(response => {
+                if (!response.ok) throw new Error("Erro no servidor: " + response.status);
+                return response.json();
+            })
+            .then(data => {
+                alert("Oficina agendada com sucesso!");
+                location.reload(); 
+            })
+            .catch(err => {
+                // Agora, se der erro, ele vai te mostrar o erro real (403, 500, etc)
+                alert("Falha na conexão: " + err.message); 
+                console.error(err);
+                btn.innerText = "Salvar Agendamento";
+                btn.disabled = false;
+            });
         };
 
         function popularSelect(id, array) {
