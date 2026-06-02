@@ -196,22 +196,17 @@
 
             fetch(URL_GAS, {
                 method: "POST",
-                headers: { 
-                    "Content-Type": "text/plain;charset=utf-8" 
-                },
+                // REMOVA O mode: "no-cors" - isso é obrigatório para que o código leia a resposta
+                headers: { "Content-Type": "text/plain;charset=utf-8" },
                 body: JSON.stringify(payload)
             })
-            .then(response => {
-                if (!response.ok) throw new Error("Erro no servidor: " + response.status);
-                return response.json();
-            })
+            .then(response => response.json()) // Agora o navegador pode ler a resposta
             .then(data => {
                 alert("Oficina agendada com sucesso!");
                 location.reload(); 
             })
             .catch(err => {
-                // Agora, se der erro, ele vai te mostrar o erro real (403, 500, etc)
-                alert("Falha na conexão: " + err.message); 
+                alert("Falha: " + err); // Isso vai te dizer o erro real
                 console.error(err);
                 btn.innerText = "Salvar Agendamento";
                 btn.disabled = false;
