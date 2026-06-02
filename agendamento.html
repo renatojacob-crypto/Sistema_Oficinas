@@ -169,25 +169,17 @@
         document.getElementById("formAgendamento").onsubmit = (e) => {
             e.preventDefault();
             const btn = document.getElementById("btnEnviar");
-
-            if(document.getElementById("cargaHoraria").value === "Horário final menor que inicial") {
-                alert("Por favor, corrija os horários informados.");
-                return;
-            }
-
-            btn.innerText = "Agendando...";
+            btn.innerText = "Salvando...";
             btn.disabled = true;
-            const dataRaw = document.getElementById("dataOficina").value; // Ex: 2026-05-05
-            const [ano, mes, dia] = dataRaw.split('-');
+
             const payload = {
-                linhaAgendamento: document.getElementById("linhaAgendamento") ? document.getElementById("linhaAgendamento").value : "",
                 regional: document.getElementById("regional").value,
                 oficina: document.getElementById("oficina").value,
-                dataOficina: `${dia}/${mes}/${ano}`, // Garante que a planilha receba DD/MM/AAAA
-                horaInicio: document.getElementById("horaInicio").value,
-                horaFim: document.getElementById("horaFim").value,
+                data: document.getElementById("dataOficina").value,
+                inicio: document.getElementById("horaInicio").value,
+                fim: document.getElementById("horaFim").value,
                 cidade: document.getElementById("cidade").value,
-                cargaHoraria: document.getElementById("cargaHoraria").value,
+                carga: document.getElementById("cargaHoraria").value,
                 instituicao: document.getElementById("instituicao").value,
                 endereco: document.getElementById("endereco").value,
                 contato: document.getElementById("contato").value,
@@ -196,18 +188,20 @@
 
             fetch(URL_GAS, {
                 method: "POST",
-                // REMOVA O mode: "no-cors" - isso é obrigatório para que o código leia a resposta
-                headers: { "Content-Type": "text/plain;charset=utf-8" },
+                headers: { "Content-Type": "application/json" }, // O padrão correto para JSON
                 body: JSON.stringify(payload)
             })
-            .then(response => response.json()) // Agora o navegador pode ler a resposta
+            .then(res => res.json())
             .then(data => {
-                alert("Oficina agendada com sucesso!");
-                location.reload(); 
+                if(data.status === "sucesso") {
+                    alert("Agendado com sucesso! ID: " + data.id);
+                    location.reload();
+                } else {
+                    alert("Erro no servidor: " + data.msg);
+                }
             })
             .catch(err => {
-                alert("Falha: " + err); // Isso vai te dizer o erro real
-                console.error(err);
+                alert("Falha na conexão: " + err); // Agora ele te dirá o erro exato
                 btn.innerText = "Salvar Agendamento";
                 btn.disabled = false;
             });
