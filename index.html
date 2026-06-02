@@ -52,6 +52,7 @@
 
     <script src="config.js"></script>
     <script>
+        // Apenas o form de login deve ser gerido aqui
         document.getElementById("formLogin").addEventListener("submit", function(e) {
             e.preventDefault();
 
@@ -64,7 +65,6 @@
                     if (data.sucesso === true) {
                         localStorage.setItem("usuarioLogado", usuario);
                         localStorage.setItem("sessaoAtiva", "sim");
-
                         window.location.href = "portal.html";
                     } else {
                         alert("Usuário ou senha inválidos.");
