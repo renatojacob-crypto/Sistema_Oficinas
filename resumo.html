@@ -9,7 +9,6 @@
         .container { max-width: 1050px; margin: 0 auto; padding: 20px; }
         .card-branco { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 20px; }
         
-        /* Ajuste do grid para suportar 5 colunas (Regional, Func, Mês, Ano, Botão) */
         .filtros-grid { 
             display: grid; grid-template-columns: 1fr 1.5fr 1fr 1fr auto; gap: 15px; 
             align-items: end; background: #f9fafb; padding: 20px; border-radius: 8px; 
@@ -21,7 +20,6 @@
         .form-group label { font-size: 13px; font-weight: 600; color: #4b5563; margin-bottom: 5px; display: block; }
         .form-group select { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
         
-        /* Painel de Totais */
         .totais-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
         @media (max-width: 600px) { .totais-grid { grid-template-columns: 1fr 1fr; } }
         .total-card { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px; border-radius: 8px; text-align: center; }
@@ -89,7 +87,6 @@
             </div>
 
             <div id="areaResultados" style="display: none;">
-                <!-- Painel de Totais -->
                 <div class="totais-grid">
                     <div class="total-card">
                         <h4>Qtd. Oficinas</h4>
@@ -109,7 +106,6 @@
                     </div>
                 </div>
 
-                <!-- Tabela Detalhada -->
                 <div class="card-branco" style="margin-top: 0;">
                     <h3 style="margin-top: 0; margin-bottom: 15px; color: #374151; font-size: 16px;">Registo Detalhado</h3>
                     <table class="styled-table" id="tabelaResumo">
@@ -124,7 +120,7 @@
                         <tbody id="corpoTabela"></tbody>
                     </table>
                     <div id="msgVazio" style="display: none; text-align: center; padding: 30px; color: #6b7280; font-style: italic;">
-                        Nenhum registo encontrado para este funcionário no período selecionado.
+                        Nenhum registo encontrado para os filtros selecionados.
                     </div>
                 </div>
             </div>
@@ -132,9 +128,7 @@
     </div>
 
     <script src="auth.js"></script>
-    <script>
-        verificarLogin();
-    </script>
+    <script>verificarLogin();</script>
     <script src="config.js"></script>
     <script>
         let dadosBase = {};
@@ -145,13 +139,11 @@
                 .then(data => {
                     dadosBase = data;
                     
-                    // 1. Preencher Anos Dinamicamente
                     const anos = new Set();
                     (data.agendamentos || []).forEach(a => { if(a.data) anos.add(a.data.split('-')[0].length === 4 ? a.data.split('-')[0] : a.data.split('/')[2]); });
                     const selectAno = document.getElementById("filtroAno");
                     [...anos].filter(Boolean).sort().reverse().forEach(ano => selectAno.innerHTML += `<option value="${ano}">${ano}</option>`);
                     
-                    // 2. Preencher Regionais
                     const divReg = document.getElementById("filtroRegional");
                     (data.regionais || []).forEach(r => {
                         const nomeReg = Array.isArray(r) ? (r.length > 1 ? r[1] : r[0]) : r;
@@ -160,12 +152,10 @@
                         }
                     });
 
-                    // 3. Setup Inicial
                     document.getElementById("filtroMes").value = new Date().getMonth() + 1;
                     document.getElementById("status").style.display = "none";
                     document.getElementById("conteudoPrincipal").style.display = "block";
                     
-                    // Dispara a função para carregar todos os funcionários inicialmente
                     atualizarFuncionarios();
                 })
                 .catch(err => {
@@ -174,7 +164,6 @@
                 });
         };
 
-        // Função para filtrar os funcionários baseado na Regional selecionada
         function atualizarFuncionarios() {
             const regSelecionada = document.getElementById("filtroRegional").value;
             const selectFunc = document.getElementById("filtroFuncionario");
@@ -185,30 +174,37 @@
 
             if (regSelecionada !== "Todas") {
                 const rSel = regSelecionada.toLowerCase();
-                
-                // Filtro Inteligente de Palavras-chave
                 instrutoresFiltrados = instrutoresFiltrados.filter(i => {
                     const regInstrutor = (i.length > 3 ? i[3] : "").toLowerCase();
-                    
                     if (rSel === regInstrutor) return true;
                     if (rSel.includes("valadares") && regInstrutor.includes("valadares")) return true;
                     if ((rSel.includes("vitória") || rSel.includes("vitoria")) && (regInstrutor.includes("vitória") || regInstrutor.includes("vitoria"))) return true;
                     if (rSel.includes("itabira") && regInstrutor.includes("itabira")) return true;
-                    
                     return false;
                 });
             }
 
-            // Extrair nomes únicos e ordenar alfabeticamente
             let nomes = instrutoresFiltrados.map(i => Array.isArray(i) ? (i.length > 1 ? i[1] : i[0]) : i);
             nomes = [...new Set(nomes)].filter(Boolean).sort();
-
-            nomes.forEach(nome => {
-                selectFunc.innerHTML += `<option value="${nome}">${nome}</option>`;
-            });
+            nomes.forEach(nome => { selectFunc.innerHTML += `<option value="${nome}">${nome}</option>`; });
         }
 
-        // Funções Auxiliares de Tratamento de Dados
+        // NOVO: Função para validar se a atividade ocorreu na mesma regional filtrada
+        function validarRegionalDaAtividade(regFiltro, regAtividade) {
+            if (regFiltro === "Todas") return true; // Permite tudo se não houver filtro
+            if (!regAtividade) return false;
+            
+            const rSel = regFiltro.toLowerCase();
+            const rAtiv = String(regAtividade).toLowerCase();
+            
+            if (rSel === rAtiv) return true;
+            if (rSel.includes("valadares") && rAtiv.includes("valadares")) return true;
+            if ((rSel.includes("vitória") || rSel.includes("vitoria")) && (rAtiv.includes("vitória") || rAtiv.includes("vitoria"))) return true;
+            if (rSel.includes("itabira") && rAtiv.includes("itabira")) return true;
+            
+            return false;
+        }
+
         function extrairMesAno(dataStr) {
             if (!dataStr) return { mes: "", ano: "" };
             const p = dataStr.includes('/') ? dataStr.split('/') : dataStr.split('-');
@@ -254,9 +250,10 @@
             return `${h}h ${m.toString().padStart(2, '0')}m`;
         }
 
-        // Função Principal de Filtragem e Renderização
         function gerarResumo() {
             const func = document.getElementById("filtroFuncionario").value;
+            const regFiltro = document.getElementById("filtroRegional").value;
+            
             if (!func) {
                 alert("Por favor, selecione um funcionário na lista.");
                 return;
@@ -270,13 +267,16 @@
             let minOficinas = 0;
             let minEventos = 0;
 
-            // 1. Buscar Oficinas (Aba Respostas + Aba Agendamentos)
+            // 1. Buscar Oficinas
             (dadosBase.respostas || []).forEach(resp => {
                 const instrutores = (resp.instrutores || "").split(',').map(i => i.trim());
                 if (!instrutores.includes(func)) return;
 
                 const ag = dadosBase.agendamentos.find(a => String(a.id) === String(resp.idAgendamento));
                 if (!ag) return;
+                
+                // Validação de Regional Aplicada
+                if (!validarRegionalDaAtividade(regFiltro, ag.regional)) return;
                 
                 const { mes, ano } = extrairMesAno(ag.data);
                 if (mes !== mesFiltro || String(ano) !== String(anoFiltro)) return;
@@ -295,10 +295,14 @@
                 minOficinas += cargaEmMinutos;
             });
 
-            // 2. Buscar Eventos (Aba Eventos)
+            // 2. Buscar Eventos
             (dadosBase.eventos || []).forEach(ev => {
                 const instrutores = (ev[8] || "").split(',').map(i => i.trim());
                 if (!instrutores.includes(func)) return;
+
+                // Validação de Regional Aplicada (Coluna 7: Regional do Evento)
+                const regEvento = ev[7] || "";
+                if (!validarRegionalDaAtividade(regFiltro, regEvento)) return;
 
                 const dataEvento = ev[3];
                 const { mes, ano } = extrairMesAno(dataEvento);
@@ -317,10 +321,8 @@
                 minEventos += cargaEmMinutos;
             });
 
-            // 3. Ordenar registros por data
             registrosDetalha.sort((a, b) => a.objData - b.objData);
 
-            // 4. Preencher a Interface
             document.getElementById("areaResultados").style.display = "block";
 
             document.getElementById("totQtdOficinas").innerText = qtdOficinas;
