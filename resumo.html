@@ -6,15 +6,17 @@
     <title>Resumo de Horas - Funcionário</title>
     <link rel="stylesheet" href="style.css">
     <style>
-        .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+        .container { max-width: 1050px; margin: 0 auto; padding: 20px; }
         .card-branco { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 20px; }
         
+        /* Ajuste do grid para suportar 5 colunas (Regional, Func, Mês, Ano, Botão) */
         .filtros-grid { 
-            display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 15px; 
+            display: grid; grid-template-columns: 1fr 1.5fr 1fr 1fr auto; gap: 15px; 
             align-items: end; background: #f9fafb; padding: 20px; border-radius: 8px; 
             border: 1px solid #e5e7eb; margin-bottom: 20px; 
         }
-        @media (max-width: 768px) { .filtros-grid { grid-template-columns: 1fr; } }
+        @media (max-width: 900px) { .filtros-grid { grid-template-columns: 1fr 1fr; } }
+        @media (max-width: 600px) { .filtros-grid { grid-template-columns: 1fr; } }
 
         .form-group label { font-size: 13px; font-weight: 600; color: #4b5563; margin-bottom: 5px; display: block; }
         .form-group select { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
@@ -40,6 +42,7 @@
             padding: 12px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; 
             font-size: 15px; transition: background 0.2s; height: 42px;
         }
+        .btn-acao:hover { background-color: #0f172a; }
     </style>
 </head>
 <body>
@@ -55,6 +58,12 @@
 
         <div id="conteudoPrincipal" style="display: none;">
             <div class="filtros-grid">
+                <div class="form-group">
+                    <label>Regional:</label>
+                    <select id="filtroRegional" onchange="atualizarFuncionarios()">
+                        <option value="Todas">Todas as Regionais</option>
+                    </select>
+                </div>
                 <div class="form-group">
                     <label>Funcionário:</label>
                     <select id="filtroFuncionario">
@@ -142,31 +151,62 @@
                     const selectAno = document.getElementById("filtroAno");
                     [...anos].filter(Boolean).sort().reverse().forEach(ano => selectAno.innerHTML += `<option value="${ano}">${ano}</option>`);
                     
-                    // 2. Preencher Funcionários únicos baseados em Respostas e Eventos
-                    const instrutores = new Set();
-                    (data.respostas || []).forEach(r => {
-                        (r.instrutores || "").split(',').forEach(i => { if (i.trim()) instrutores.add(i.trim()); });
-                    });
-                    (data.eventos || []).forEach(e => {
-                        (e[8] || "").split(',').forEach(i => { if (i.trim()) instrutores.add(i.trim()); }); // Coluna 8 costuma ser Participantes
-                    });
-
-                    const selectFunc = document.getElementById("filtroFuncionario");
-                    selectFunc.innerHTML = '<option value="">Selecione um funcionário...</option>';
-                    [...instrutores].sort().forEach(inst => {
-                        selectFunc.innerHTML += `<option value="${inst}">${inst}</option>`;
+                    // 2. Preencher Regionais
+                    const divReg = document.getElementById("filtroRegional");
+                    (data.regionais || []).forEach(r => {
+                        const nomeReg = Array.isArray(r) ? (r.length > 1 ? r[1] : r[0]) : r;
+                        if (nomeReg) {
+                            divReg.innerHTML += `<option value="${nomeReg}">${nomeReg}</option>`;
+                        }
                     });
 
                     // 3. Setup Inicial
                     document.getElementById("filtroMes").value = new Date().getMonth() + 1;
                     document.getElementById("status").style.display = "none";
                     document.getElementById("conteudoPrincipal").style.display = "block";
+                    
+                    // Dispara a função para carregar todos os funcionários inicialmente
+                    atualizarFuncionarios();
                 })
                 .catch(err => {
                     document.getElementById("status").innerText = "Erro ao carregar dados: " + err;
                     document.getElementById("status").style.color = "#dc2626";
                 });
         };
+
+        // Função para filtrar os funcionários baseado na Regional selecionada
+        function atualizarFuncionarios() {
+            const regSelecionada = document.getElementById("filtroRegional").value;
+            const selectFunc = document.getElementById("filtroFuncionario");
+            
+            selectFunc.innerHTML = '<option value="">Selecione um funcionário...</option>';
+
+            let instrutoresFiltrados = dadosBase.instrutores || [];
+
+            if (regSelecionada !== "Todas") {
+                const rSel = regSelecionada.toLowerCase();
+                
+                // Filtro Inteligente de Palavras-chave
+                instrutoresFiltrados = instrutoresFiltrados.filter(i => {
+                    const regInstrutor = (i.length > 3 ? i[3] : "").toLowerCase();
+                    
+                    if (rSel === regInstrutor) return true;
+                    if (rSel.includes("valadares") && regInstrutor.includes("valadares")) return true;
+                    if ((rSel.includes("vitória") || rSel.includes("vitoria")) && (regInstrutor.includes("vitória") || regInstrutor.includes("vitoria"))) return true;
+                    if (rSel.includes("itabira") && regInstrutor.includes("itabira")) return true;
+                    
+                    return false;
+                });
+            }
+
+            // Extrair nomes únicos e ordenar alfabeticamente
+            let nomes = instrutoresFiltrados.map(i => Array.isArray(i) ? (i.length > 1 ? i[1] : i[0]) : i);
+            nomes = [...new Set(nomes)].filter(Boolean).sort();
+
+            nomes.forEach(nome => {
+                selectFunc.innerHTML += `<option value="${nome}">${nome}</option>`;
+            });
+        }
 
         // Funções Auxiliares de Tratamento de Dados
         function extrairMesAno(dataStr) {
@@ -191,7 +231,6 @@
         }
 
         function calcularCarga(inicio, fim, cargaDireta) {
-            // Tenta usar a carga direta (ex: "04h 30m"), senão calcula pelo inicio e fim
             if (cargaDireta) {
                 const h = parseInt(cargaDireta.match(/(\d+)h/)?.[1] || 0);
                 const m = parseInt(cargaDireta.match(/(\d+)m/)?.[1] || 0);
@@ -231,7 +270,7 @@
             let minOficinas = 0;
             let minEventos = 0;
 
-            // 1. Buscar Oficinas realizadas por este funcionário
+            // 1. Buscar Oficinas (Aba Respostas + Aba Agendamentos)
             (dadosBase.respostas || []).forEach(resp => {
                 const instrutores = (resp.instrutores || "").split(',').map(i => i.trim());
                 if (!instrutores.includes(func)) return;
@@ -256,41 +295,39 @@
                 minOficinas += cargaEmMinutos;
             });
 
-            // 2. Buscar Eventos participados por este funcionário
+            // 2. Buscar Eventos (Aba Eventos)
             (dadosBase.eventos || []).forEach(ev => {
-                const instrutores = (ev[8] || "").split(',').map(i => i.trim()); // Ajuste se a coluna de participantes for diferente
+                const instrutores = (ev[8] || "").split(',').map(i => i.trim());
                 if (!instrutores.includes(func)) return;
 
                 const dataEvento = ev[3];
                 const { mes, ano } = extrairMesAno(dataEvento);
                 if (mes !== mesFiltro || String(ano) !== String(anoFiltro)) return;
 
-                const cargaEmMinutos = calcularCarga(ev[4], ev[5], ev[6]); // Hora início, Hora fim, Carga
+                const cargaEmMinutos = calcularCarga(ev[4], ev[5], ev[6]);
                 
                 registrosDetalha.push({
                     objData: converterParaDataObj(dataEvento),
                     dataFormatada: formatarDataBR(dataEvento),
                     tipo: "Evento",
-                    descricao: ev[1] || "Evento Corporativo", // Coluna do Nome do Evento
+                    descricao: ev[1] || "Evento Corporativo",
                     minutos: cargaEmMinutos
                 });
 
                 minEventos += cargaEmMinutos;
             });
 
-            // 3. Ordenar registros por data (Crescente)
+            // 3. Ordenar registros por data
             registrosDetalha.sort((a, b) => a.objData - b.objData);
 
             // 4. Preencher a Interface
             document.getElementById("areaResultados").style.display = "block";
 
-            // Totais
             document.getElementById("totQtdOficinas").innerText = qtdOficinas;
             document.getElementById("totHorasOficinas").innerText = formatarMinutosParaHoras(minOficinas);
             document.getElementById("totHorasEventos").innerText = formatarMinutosParaHoras(minEventos);
             document.getElementById("totHorasGeral").innerText = formatarMinutosParaHoras(minOficinas + minEventos);
 
-            // Tabela Detalhada
             const tbody = document.getElementById("corpoTabela");
             tbody.innerHTML = "";
 
