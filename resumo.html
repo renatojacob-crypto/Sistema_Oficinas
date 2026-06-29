@@ -1,24 +1,45 @@
 <!DOCTYPE html>
-<html lang="pt-PT">
+<html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Resumo de Horas - Equipe</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Resumo de Horas - Funcionário</title>
     <link rel="stylesheet" href="style.css">
     <style>
         .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
         .card-branco { background: white; padding: 25px; border-radius: 12px; box-shadow: 0 4px 12px rgba(0,0,0,0.08); margin-top: 20px; }
         
         .filtros-grid { 
-            display: grid; grid-template-columns: 1fr 1fr auto; gap: 15px; 
+            display: grid; grid-template-columns: 2fr 1fr 1fr auto; gap: 15px; 
             align-items: end; background: #f9fafb; padding: 20px; border-radius: 8px; 
-            border: 1px solid #e5e7eb; margin-bottom: 25px; 
+            border: 1px solid #e5e7eb; margin-bottom: 20px; 
         }
+        @media (max-width: 768px) { .filtros-grid { grid-template-columns: 1fr; } }
+
+        .form-group label { font-size: 13px; font-weight: 600; color: #4b5563; margin-bottom: 5px; display: block; }
+        .form-group select { width: 100%; padding: 10px; border: 1px solid #d1d5db; border-radius: 6px; font-size: 14px; box-sizing: border-box; }
         
-        .styled-table { width: 100%; border-collapse: collapse; text-align: center; font-size: 14px; }
-        .styled-table thead tr { background-color: var(--primary-color); color: #ffffff; }
-        .styled-table th, .styled-table td { padding: 12px; border-bottom: 1px solid #e5e7eb; }
-        .total-highlight { font-weight: bold; color: var(--primary-color); background: #f0fdf4; }
-        .zero-value { color: #d1d5db; }
+        /* Painel de Totais */
+        .totais-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 15px; margin-bottom: 20px; }
+        @media (max-width: 600px) { .totais-grid { grid-template-columns: 1fr 1fr; } }
+        .total-card { background: #f0fdf4; border: 1px solid #bbf7d0; padding: 15px; border-radius: 8px; text-align: center; }
+        .total-card h4 { margin: 0; font-size: 12px; color: #166534; text-transform: uppercase; }
+        .total-card p { margin: 5px 0 0; font-size: 22px; font-weight: bold; color: var(--primary-color); }
+        .total-card.destaque { background: var(--primary-color); border-color: var(--primary-color); }
+        .total-card.destaque h4, .total-card.destaque p { color: white; }
+
+        .styled-table { width: 100%; border-collapse: collapse; text-align: left; font-size: 14px; }
+        .styled-table thead tr { background-color: #f3f4f6; color: #374151; }
+        .styled-table th, .styled-table td { padding: 12px 15px; border-bottom: 1px solid #e5e7eb; }
+        .badge-tipo { padding: 4px 8px; border-radius: 12px; font-size: 11px; font-weight: bold; }
+        .badge-oficina { background: #dbeafe; color: #1e40af; }
+        .badge-evento { background: #fef3c7; color: #92400e; }
+        
+        .btn-acao {
+            background-color: var(--primary-color); color: white; border: none; 
+            padding: 12px 20px; border-radius: 6px; font-weight: bold; cursor: pointer; 
+            font-size: 15px; transition: background 0.2s; height: 42px;
+        }
     </style>
 </head>
 <body>
@@ -26,14 +47,20 @@
     <div class="container">
         <header class="form-header" style="text-align: center;">
             <a href="siscontrol.html" style="text-decoration: none; color: var(--primary-color); font-size: 14px; font-weight: 600;">← Voltar ao Início</a>
-            <h1>Resumo de Carga Horária</h1>
-            <p style="color: #6b7280;">Soma de horas trabalhadas em Oficinas e Eventos</p>
+            <h1>Extrato de Horas por Funcionário</h1>
+            <p style="color: #6b7280; margin-top: 5px;">Detalhamento de Oficinas e Eventos trabalhados</p>
         </header>
 
-        <div id="status" style="text-align: center; padding: 20px;">A calcular horas da equipe...</div>
+        <div id="status" style="text-align: center; padding: 20px; font-weight: bold; color: #4b5563;">A carregar base de dados...</div>
 
         <div id="conteudoPrincipal" style="display: none;">
             <div class="filtros-grid">
+                <div class="form-group">
+                    <label>Funcionário:</label>
+                    <select id="filtroFuncionario">
+                        <option value="">A carregar equipa...</option>
+                    </select>
+                </div>
                 <div class="form-group">
                     <label>Mês:</label>
                     <select id="filtroMes">
@@ -49,24 +76,48 @@
                     <label>Ano:</label>
                     <select id="filtroAno"></select>
                 </div>
-                <button class="btn-acao" onclick="gerarResumo()">Calcular</button>
+                <button class="btn-acao" onclick="gerarResumo()">Filtrar</button>
             </div>
 
-            <div class="card-branco">
-                <table class="styled-table" id="tabelaResumo">
-                    <thead>
-                        <tr>
-                            <th>Instrutor</th>
-                            <th>Oficinas</th>
-                            <th>Horas Oficinas</th>
-                            <th>Eventos</th>
-                            <th>Horas Eventos</th>
-                            <th>Total Geral</th>
-                        </tr>
-                    </thead>
-                    <tbody id="corpoTabela"></tbody>
-                </table>
-                <div id="msgVazio" style="display: none; text-align: center; padding: 20px;">Nenhum registo encontrado.</div>
+            <div id="areaResultados" style="display: none;">
+                <!-- Painel de Totais -->
+                <div class="totais-grid">
+                    <div class="total-card">
+                        <h4>Qtd. Oficinas</h4>
+                        <p id="totQtdOficinas">0</p>
+                    </div>
+                    <div class="total-card">
+                        <h4>Horas Oficinas</h4>
+                        <p id="totHorasOficinas">0h 00m</p>
+                    </div>
+                    <div class="total-card">
+                        <h4>Horas Eventos</h4>
+                        <p id="totHorasEventos">0h 00m</p>
+                    </div>
+                    <div class="total-card destaque">
+                        <h4>Total Geral</h4>
+                        <p id="totHorasGeral">0h 00m</p>
+                    </div>
+                </div>
+
+                <!-- Tabela Detalhada -->
+                <div class="card-branco" style="margin-top: 0;">
+                    <h3 style="margin-top: 0; margin-bottom: 15px; color: #374151; font-size: 16px;">Registo Detalhado</h3>
+                    <table class="styled-table" id="tabelaResumo">
+                        <thead>
+                            <tr>
+                                <th>Data</th>
+                                <th>Tipo</th>
+                                <th>Atividade / Descrição</th>
+                                <th>Carga Horária</th>
+                            </tr>
+                        </thead>
+                        <tbody id="corpoTabela"></tbody>
+                    </table>
+                    <div id="msgVazio" style="display: none; text-align: center; padding: 30px; color: #6b7280; font-style: italic;">
+                        Nenhum registo encontrado para este funcionário no período selecionado.
+                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -85,96 +136,183 @@
                 .then(data => {
                     dadosBase = data;
                     
-                    // Preencher Anos
+                    // 1. Preencher Anos Dinamicamente
                     const anos = new Set();
-                    (data.agendamentos || []).forEach(a => { if(a.data) anos.add(a.data.split('-')[0]); });
+                    (data.agendamentos || []).forEach(a => { if(a.data) anos.add(a.data.split('-')[0].length === 4 ? a.data.split('-')[0] : a.data.split('/')[2]); });
                     const selectAno = document.getElementById("filtroAno");
-                    [...anos].sort().reverse().forEach(ano => selectAno.innerHTML += `<option value="${ano}">${ano}</option>`);
+                    [...anos].filter(Boolean).sort().reverse().forEach(ano => selectAno.innerHTML += `<option value="${ano}">${ano}</option>`);
                     
+                    // 2. Preencher Funcionários únicos baseados em Respostas e Eventos
+                    const instrutores = new Set();
+                    (data.respostas || []).forEach(r => {
+                        (r.instrutores || "").split(',').forEach(i => { if (i.trim()) instrutores.add(i.trim()); });
+                    });
+                    (data.eventos || []).forEach(e => {
+                        (e[8] || "").split(',').forEach(i => { if (i.trim()) instrutores.add(i.trim()); }); // Coluna 8 costuma ser Participantes
+                    });
+
+                    const selectFunc = document.getElementById("filtroFuncionario");
+                    selectFunc.innerHTML = '<option value="">Selecione um funcionário...</option>';
+                    [...instrutores].sort().forEach(inst => {
+                        selectFunc.innerHTML += `<option value="${inst}">${inst}</option>`;
+                    });
+
+                    // 3. Setup Inicial
                     document.getElementById("filtroMes").value = new Date().getMonth() + 1;
                     document.getElementById("status").style.display = "none";
                     document.getElementById("conteudoPrincipal").style.display = "block";
-                    gerarResumo();
+                })
+                .catch(err => {
+                    document.getElementById("status").innerText = "Erro ao carregar dados: " + err;
+                    document.getElementById("status").style.color = "#dc2626";
                 });
         };
 
+        // Funções Auxiliares de Tratamento de Dados
         function extrairMesAno(dataStr) {
             if (!dataStr) return { mes: "", ano: "" };
             const p = dataStr.includes('/') ? dataStr.split('/') : dataStr.split('-');
-            return dataStr.includes('/') ? { mes: parseInt(p[1]), ano: p[2] } : { mes: parseInt(p[1]), ano: p[0] };
+            if (dataStr.includes('/')) return { mes: parseInt(p[1]), ano: p[2] };
+            return { mes: parseInt(p[1]), ano: p[0] };
         }
 
-        function cargaParaMinutos(str) {
-            if (!str) return 0;
-            const h = parseInt(str.match(/(\d+)h/)?.[1] || 0);
-            const m = parseInt(str.match(/(\d+)m/)?.[1] || 0);
-            return (h * 60) + m;
+        function converterParaDataObj(dataStr) {
+            if (!dataStr) return new Date(0);
+            const p = dataStr.includes('/') ? dataStr.split('/') : dataStr.split('-');
+            if (dataStr.includes('/')) return new Date(`${p[2]}-${p[1]}-${p[0]}T00:00:00`);
+            return new Date(`${p[0]}-${p[1]}-${p[2]}T00:00:00`);
+        }
+
+        function formatarDataBR(dataStr) {
+            if (!dataStr) return "";
+            if (dataStr.includes('/')) return dataStr;
+            const p = dataStr.split('-');
+            return p.length >= 3 ? `${p[2]}/${p[1]}/${p[0]}` : dataStr;
+        }
+
+        function calcularCarga(inicio, fim, cargaDireta) {
+            // Tenta usar a carga direta (ex: "04h 30m"), senão calcula pelo inicio e fim
+            if (cargaDireta) {
+                const h = parseInt(cargaDireta.match(/(\d+)h/)?.[1] || 0);
+                const m = parseInt(cargaDireta.match(/(\d+)m/)?.[1] || 0);
+                return (h * 60) + m;
+            }
+            if (inicio && fim) {
+                const [h1, m1] = inicio.split(':').map(Number);
+                const [h2, m2] = fim.split(':').map(Number);
+                let min1 = (h1 * 60) + m1;
+                let min2 = (h2 * 60) + m2;
+                if (min2 < min1) min2 += 24 * 60;
+                return min2 - min1;
+            }
+            return 0;
         }
 
         function formatarMinutosParaHoras(totalMinutos) {
+            if (totalMinutos === 0) return "0h 00m";
             const h = Math.floor(totalMinutos / 60);
             const m = Math.round(totalMinutos % 60);
-            return `${h}h ${m < 10 ? '0'+m : m}m`;
+            return `${h}h ${m.toString().padStart(2, '0')}m`;
         }
 
+        // Função Principal de Filtragem e Renderização
         function gerarResumo() {
+            const func = document.getElementById("filtroFuncionario").value;
+            if (!func) {
+                alert("Por favor, selecione um funcionário na lista.");
+                return;
+            }
+
             const mesFiltro = parseInt(document.getElementById("filtroMes").value);
             const anoFiltro = document.getElementById("filtroAno").value;
-            const instrutoresMap = {};
+            
+            let registrosDetalha = [];
+            let qtdOficinas = 0;
+            let minOficinas = 0;
+            let minEventos = 0;
 
-            // 1. Processar Oficinas (Respostas)
+            // 1. Buscar Oficinas realizadas por este funcionário
             (dadosBase.respostas || []).forEach(resp => {
-                const ag = dadosBase.agendamentos.find(a => a.id === resp.idAgendamento);
+                const instrutores = (resp.instrutores || "").split(',').map(i => i.trim());
+                if (!instrutores.includes(func)) return;
+
+                const ag = dadosBase.agendamentos.find(a => String(a.id) === String(resp.idAgendamento));
                 if (!ag) return;
+                
                 const { mes, ano } = extrairMesAno(ag.data);
-                if (mes !== mesFiltro || ano !== anoFiltro) return;
+                if (mes !== mesFiltro || String(ano) !== String(anoFiltro)) return;
 
-                const carga = cargaParaMinutos(ag.carga);
-                (resp.instrutores || "").split(',').forEach(nome => {
-                    const n = nome.trim();
-                    if (!instrutoresMap[n]) instrutoresMap[n] = { qtdOf: 0, minOf: 0, qtdEv: 0, minEv: 0 };
-                    instrutoresMap[n].qtdOf++;
-                    instrutoresMap[n].minOf += carga;
+                const cargaEmMinutos = calcularCarga(ag.inicio, ag.fim, ag.carga);
+                
+                registrosDetalha.push({
+                    objData: converterParaDataObj(ag.data),
+                    dataFormatada: formatarDataBR(ag.data),
+                    tipo: "Oficina",
+                    descricao: `${ag.oficina} - ${ag.inst}`,
+                    minutos: cargaEmMinutos
                 });
+
+                qtdOficinas++;
+                minOficinas += cargaEmMinutos;
             });
 
-            // 2. Processar Eventos
+            // 2. Buscar Eventos participados por este funcionário
             (dadosBase.eventos || []).forEach(ev => {
-                const { mes, ano } = extrairMesAno(ev[3]); // Coluna Data Evento
-                if (mes !== mesFiltro || ano !== anoFiltro) return;
+                const instrutores = (ev[8] || "").split(',').map(i => i.trim()); // Ajuste se a coluna de participantes for diferente
+                if (!instrutores.includes(func)) return;
 
-                const carga = cargaParaMinutos(ev[6]); // Coluna Carga Horária
-                (ev[8] || "").split(',').forEach(nome => {
-                    const n = nome.trim();
-                    if (!instrutoresMap[n]) instrutoresMap[n] = { qtdOf: 0, minOf: 0, qtdEv: 0, minEv: 0 };
-                    instrutoresMap[n].qtdEv++;
-                    instrutoresMap[n].minEv += carga;
+                const dataEvento = ev[3];
+                const { mes, ano } = extrairMesAno(dataEvento);
+                if (mes !== mesFiltro || String(ano) !== String(anoFiltro)) return;
+
+                const cargaEmMinutos = calcularCarga(ev[4], ev[5], ev[6]); // Hora início, Hora fim, Carga
+                
+                registrosDetalha.push({
+                    objData: converterParaDataObj(dataEvento),
+                    dataFormatada: formatarDataBR(dataEvento),
+                    tipo: "Evento",
+                    descricao: ev[1] || "Evento Corporativo", // Coluna do Nome do Evento
+                    minutos: cargaEmMinutos
                 });
+
+                minEventos += cargaEmMinutos;
             });
 
+            // 3. Ordenar registros por data (Crescente)
+            registrosDetalha.sort((a, b) => a.objData - b.objData);
+
+            // 4. Preencher a Interface
+            document.getElementById("areaResultados").style.display = "block";
+
+            // Totais
+            document.getElementById("totQtdOficinas").innerText = qtdOficinas;
+            document.getElementById("totHorasOficinas").innerText = formatarMinutosParaHoras(minOficinas);
+            document.getElementById("totHorasEventos").innerText = formatarMinutosParaHoras(minEventos);
+            document.getElementById("totHorasGeral").innerText = formatarMinutosParaHoras(minOficinas + minEventos);
+
+            // Tabela Detalhada
             const tbody = document.getElementById("corpoTabela");
             tbody.innerHTML = "";
-            let temDados = false;
 
-            Object.keys(instrutoresMap).sort().forEach(nome => {
-                const inst = instrutoresMap[nome];
-                const totalMin = inst.minOf + inst.minEv;
-                
-                if (totalMin > 0) {
-                    temDados = true;
-                    tbody.innerHTML += `<tr>
-                        <td><strong>${nome}</strong></td>
-                        <td>${inst.qtdOf}</td>
-                        <td>${formatarMinutosParaHoras(inst.minOf)}</td>
-                        <td>${inst.qtdEv}</td>
-                        <td>${formatarMinutosParaHoras(inst.minEv)}</td>
-                        <td class="total-highlight">${formatarMinutosParaHoras(totalMin)}</td>
-                    </tr>`;
-                }
-            });
+            if (registrosDetalha.length === 0) {
+                document.getElementById("tabelaResumo").style.display = "none";
+                document.getElementById("msgVazio").style.display = "block";
+            } else {
+                document.getElementById("tabelaResumo").style.display = "table";
+                document.getElementById("msgVazio").style.display = "none";
 
-            document.getElementById("tabelaResumo").style.display = temDados ? "table" : "none";
-            document.getElementById("msgVazio").style.display = temDados ? "none" : "block";
+                registrosDetalha.forEach(reg => {
+                    const badgeClass = reg.tipo === 'Oficina' ? 'badge-oficina' : 'badge-evento';
+                    tbody.innerHTML += `
+                        <tr>
+                            <td><strong>${reg.dataFormatada}</strong></td>
+                            <td><span class="badge-tipo ${badgeClass}">${reg.tipo}</span></td>
+                            <td>${reg.descricao}</td>
+                            <td style="font-weight: 600; color: #374151;">${formatarMinutosParaHoras(reg.minutos)}</td>
+                        </tr>
+                    `;
+                });
+            }
         }
     </script>
 </body>
